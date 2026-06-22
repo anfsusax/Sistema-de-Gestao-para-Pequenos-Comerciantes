@@ -1,0 +1,7 @@
+<Solution>
+  <Folder Name="/src/">
+    <Project Path="src/SalgaFacil.Domain/SalgaFacil.Domain.csproj" />
+    <Project Path="src/SalgaFacil.Infrastructure/SalgaFacil.Infrastructure.csproj" />
+    <Project Path="src/SalgaFacil.Web/SalgaFacil.Web.csproj" />
+  </Folder>
+</Solution>

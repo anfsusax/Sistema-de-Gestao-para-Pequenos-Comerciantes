@@ -1,0 +1,76 @@
+@page "/produtos/novo"
+@page "/produtos/editar/{Id:int}"
+@rendermode InteractiveServer
+@inject ProdutoService Produtos
+@inject NavigationManager Nav
+
+<PageTitle>@(_editando ? "Editar" : "Novo") Produto — SalgadosPro</PageTitle>
+
+<div class="page-header">
+    <div>
+        <h1>@(_editando ? "Editar Produto" : "Novo Produto")</h1>
+    </div>
+    <a href="/produtos" class="btn btn-secondary">← Voltar</a>
+</div>
+
+<div class="card form-card">
+    <EditForm Model="_produto" OnValidSubmit="Salvar">
+        <div class="form-group">
+            <label>Nome</label>
+            <InputText class="form-control" @bind-Value="_produto.Nome" placeholder="Ex: Coxinha de Frango" />
+        </div>
+        <div class="form-row">
+            <div class="form-group">
+                <label>Categoria</label>
+                <InputText class="form-control" @bind-Value="_produto.Categoria" placeholder="Ex: Frango" />
+            </div>
+            <div class="form-group">
+                <label>Tipo</label>
+                <div class="radio-group" style="margin-top:10px">
+                    <label><input type="radio" name="tipo" checked="@(_produto.Tipo == TipoProduto.Frito)" @onchange="() => _produto.Tipo = TipoProduto.Frito" /> Frito</label>
+                    <label><input type="radio" name="tipo" checked="@(_produto.Tipo == TipoProduto.Assado)" @onchange="() => _produto.Tipo = TipoProduto.Assado" /> Assado</label>
+                </div>
+            </div>
+        </div>
+        <div class="form-row">
+            <div class="form-group">
+                <label>Preço Venda</label>
+                <InputNumber class="form-control" @bind-Value="_produto.PrecoVenda" />
+            </div>
+            <div class="form-group">
+                <label>Custo Estimado</label>
+                <InputNumber class="form-control" @bind-Value="_produto.CustoEstimado" />
+            </div>
+        </div>
+        <div class="form-group">
+            <label>Descrição</label>
+            <InputTextArea class="form-control" @bind-Value="_produto.Descricao" rows="3" />
+        </div>
+        <div class="form-group">
+            <label><InputCheckbox @bind-Value="_produto.Ativo" /> Produto ativo</label>
+        </div>
+        <button type="submit" class="btn btn-primary">Salvar</button>
+    </EditForm>
+</div>
+
+@code {
+    [Parameter] public int Id { get; set; }
+    private Produto _produto = new() { Categoria = "Salgado", Tipo = TipoProduto.Frito, Ativo = true };
+    private bool _editando;
+
+    protected override async Task OnInitializedAsync()
+    {
+        if (Id > 0)
+        {
+            _editando = true;
+            var p = await Produtos.ObterAsync(Id);
+            if (p != null) _produto = p;
+        }
+    }
+
+    private async Task Salvar()
+    {
+        await Produtos.SalvarAsync(_produto);
+        Nav.NavigateTo("/produtos");
+    }
+}

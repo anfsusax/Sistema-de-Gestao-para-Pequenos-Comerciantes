@@ -1,0 +1,10 @@
+@code {
+    [Parameter] public string Nome { get; set; } = string.Empty;
+
+    private string Iniciais => string.Concat(
+        Nome.Split(' ', StringSplitOptions.RemoveEmptyEntries)
+            .Take(2)
+            .Select(p => char.ToUpper(p[0])));
+}
+
+<div class="row-avatar">@Iniciais</div>

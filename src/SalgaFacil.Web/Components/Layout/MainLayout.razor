@@ -1,0 +1,82 @@
+﻿@inherits LayoutComponentBase
+@inject AuthService Auth
+@inject NavigationManager Nav
+
+@if (IsLoginPage)
+{
+    @Body
+}
+else
+{
+    <div class="app-shell">
+        <aside class="sidebar">
+            <div class="sidebar-brand">
+                <div class="brand-icon">🥟</div>
+                <div class="brand-text">
+                    <strong>SalgadosPro</strong>
+                    <span>Gestão Comercial</span>
+                </div>
+            </div>
+            <ul class="nav-menu">
+                <li><NavLink class="nav-link" href="/" Match="NavLinkMatch.All" ActiveClass="active">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg>
+                    Dashboard
+                </NavLink></li>
+                <li><NavLink class="nav-link" href="/pedidos" ActiveClass="active">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2"/><rect x="9" y="3" width="6" height="4" rx="1"/></svg>
+                    Pedidos
+                </NavLink></li>
+                <li><NavLink class="nav-link" href="/produtos" ActiveClass="active">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 16V8a2 2 0 00-1-1.73l-7-4a2 2 0 00-2 0l-7 4A2 2 0 003 8v8a2 2 0 001 1.73l7 4a2 2 0 002 0l7-4A2 2 0 0021 16z"/></svg>
+                    Produtos
+                </NavLink></li>
+                <li><NavLink class="nav-link" href="/producao" ActiveClass="active">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 2L3 6v14a2 2 0 002 2h14a2 2 0 002-2V6l-3-4z"/><line x1="3" y1="6" x2="21" y2="6"/><path d="M16 10a4 4 0 01-8 0"/></svg>
+                    Produção
+                </NavLink></li>
+                <li><NavLink class="nav-link" href="/clientes" ActiveClass="active">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 00-3-3.87"/><path d="M16 3.13a4 4 0 010 7.75"/></svg>
+                    Clientes
+                </NavLink></li>
+                <li><NavLink class="nav-link" href="/custos" ActiveClass="active">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 000 7h5a3.5 3.5 0 010 7H6"/></svg>
+                    Custos
+                </NavLink></li>
+            </ul>
+            <div class="sidebar-footer">
+                <NavLink class="nav-link" href="/configuracoes" ActiveClass="active">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 010 2.83 2 2 0 01-2.83 0l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 01-4 0v-.09A1.65 1.65 0 009 19.4a1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 01-2.83 0 2 2 0 010-2.83l.06-.06A1.65 1.65 0 004.68 15a1.65 1.65 0 00-1.51-1H3a2 2 0 010-4h.09A1.65 1.65 0 004.6 9a1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 012.83-2.83l.06.06A1.65 1.65 0 009 4.68a1.65 1.65 0 001-1.51V3a2 2 0 014 0v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 012.83 2.83l-.06.06A1.65 1.65 0 0019.4 9a1.65 1.65 0 001.51 1H21a2 2 0 010 4h-.09a1.65 1.65 0 00-1.51 1z"/></svg>
+                    Configurações
+                </NavLink>
+            </div>
+        </aside>
+        <div class="main-area">
+            <div class="top-bar">
+                <div class="top-bar-actions">
+                    <div class="notif-btn">🔔</div>
+                    <div class="user-menu">
+                        <span style="font-size:13px;color:var(--text-muted)">Olá, @(Auth.UsuarioAtual?.Nome.Split(' ').FirstOrDefault())</span>
+                        <div class="user-avatar">@(Auth.UsuarioAtual?.Iniciais)</div>
+                    </div>
+                </div>
+            </div>
+            <div class="page-content">
+                @Body
+            </div>
+        </div>
+    </div>
+}
+
+<div id="blazor-error-ui" data-nosnippet>
+    Erro inesperado. <a href="." class="reload">Recarregar</a>
+</div>
+
+@code {
+    private bool IsLoginPage => Nav.Uri.Contains("/login", StringComparison.OrdinalIgnoreCase);
+
+    protected override void OnAfterRender(bool firstRender)
+    {
+        if (firstRender && !Auth.EstaAutenticado && !IsLoginPage)
+            Nav.NavigateTo("/login");
+    }
+}

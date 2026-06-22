@@ -1,0 +1,9 @@
+@using SalgaFacil.Domain.Enums
+
+<span class="badge @(Tipo == TipoProduto.Frito ? "badge-frito" : "badge-assado")">
+    @(Tipo == TipoProduto.Frito ? "🔥 Frito" : "✨ Assado")
+</span>
+
+@code {
+    [Parameter] public TipoProduto Tipo { get; set; }
+}

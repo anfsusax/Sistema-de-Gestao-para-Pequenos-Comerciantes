@@ -1,0 +1,93 @@
+@page "/pedidos"
+@rendermode InteractiveServer
+@inject PedidoService Pedidos
+@inject NavigationManager Nav
+
+<PageTitle>Pedidos — SalgadosPro</PageTitle>
+
+<div class="page-header">
+    <div>
+        <h1>Pedidos</h1>
+        <p class="subtitle">@_lista.Count(p => p.Status is StatusPedido.Aguardando or StatusPedido.EmProducao or StatusPedido.Pronto) pedidos ativos</p>
+    </div>
+    <a href="/pedidos/novo" class="btn btn-primary">+ Novo Pedido</a>
+</div>
+
+<div class="card table-card">
+    <div class="table-toolbar">
+        <div class="search-input">
+            <span>🔍</span>
+            <input placeholder="Cliente ou #pedido..." @bind="_busca" @bind:event="oninput" @onkeyup="Filtrar" />
+        </div>
+        <div class="filter-chips">
+            <button class="chip @(_status == null ? "active" : "")" @onclick="() => SetStatus(null)">Todos</button>
+            <button class="chip @(_status == StatusPedido.Aguardando ? "active" : "")" @onclick="() => SetStatus(StatusPedido.Aguardando)">Aguardando</button>
+            <button class="chip @(_status == StatusPedido.EmProducao ? "active" : "")" @onclick="() => SetStatus(StatusPedido.EmProducao)">Produção</button>
+            <button class="chip @(_status == StatusPedido.Pronto ? "active" : "")" @onclick="() => SetStatus(StatusPedido.Pronto)">Pronto</button>
+            <button class="chip @(_status == StatusPedido.Entregue ? "active" : "")" @onclick="() => SetStatus(StatusPedido.Entregue)">Entregue</button>
+        </div>
+    </div>
+    <table class="data-table">
+        <thead>
+            <tr>
+                <th>#</th>
+                <th>Cliente</th>
+                <th>Data</th>
+                <th>Salgados</th>
+                <th>Valor</th>
+                <th>Status</th>
+                <th></th>
+            </tr>
+        </thead>
+        <tbody>
+            @foreach (var p in _filtrados)
+            {
+                <tr>
+                    <td>#@p.Id.ToString("D4")</td>
+                    <td>
+                        <div class="row-user">
+                            <UserAvatar Nome="@p.Cliente.Nome" />
+                            @p.Cliente.Nome
+                        </div>
+                    </td>
+                    <td>@p.Data.ToString("dd/MM/yyyy")</td>
+                    <td>@ContarSalgados(p)</td>
+                    <td class="valor">@p.Total.ToString("C", _ptBr)</td>
+                    <td><StatusBadge Status="@p.Status" /></td>
+                    <td>
+                        <button class="btn-icon" title="Ver detalhe" @onclick="() => VerDetalhe(p.Id)">👁️</button>
+                    </td>
+                </tr>
+            }
+        </tbody>
+    </table>
+</div>
+
+@code {
+    private List<Pedido> _lista = [];
+    private List<Pedido> _filtrados = [];
+    private StatusPedido? _status;
+    private string _busca = "";
+    private readonly System.Globalization.CultureInfo _ptBr = new("pt-BR");
+
+    protected override async Task OnInitializedAsync() => await Carregar();
+
+    private async Task Carregar()
+    {
+        _lista = await Pedidos.ListarAsync(_status);
+        Filtrar();
+    }
+
+    private async Task SetStatus(StatusPedido? s) { _status = s; await Carregar(); }
+
+    private void Filtrar()
+    {
+        _filtrados = string.IsNullOrWhiteSpace(_busca)
+            ? _lista
+            : _lista.Where(p => p.Cliente.Nome.Contains(_busca, StringComparison.OrdinalIgnoreCase) || p.Id.ToString().Contains(_busca)).ToList();
+    }
+
+    private void VerDetalhe(int id) => Nav.NavigateTo($"/pedidos/{id}");
+
+    private int ContarSalgados(Pedido p) => p.Itens.Sum(i => i.Quantidade);
+}

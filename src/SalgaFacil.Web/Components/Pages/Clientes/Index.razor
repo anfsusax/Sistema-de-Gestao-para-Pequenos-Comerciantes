@@ -1,0 +1,83 @@
+@page "/clientes"
+@rendermode InteractiveServer
+@inject ClienteService Clientes
+@inject NavigationManager Nav
+
+<PageTitle>Clientes — SalgadosPro</PageTitle>
+
+<div class="page-header">
+    <div>
+        <h1>Clientes</h1>
+        <p class="subtitle">@_lista.Count clientes cadastrados</p>
+    </div>
+    <a href="/clientes/novo" class="btn btn-primary">+ Novo Cliente</a>
+</div>
+
+<div class="card table-card">
+    <div class="table-toolbar">
+        <div class="search-input">
+            <span>🔍</span>
+            <input placeholder="Buscar cliente..." @bind="_busca" @bind:event="oninput" @onkeyup="Filtrar" />
+        </div>
+    </div>
+    <table class="data-table">
+        <thead>
+            <tr>
+                <th>Nome</th>
+                <th>Telefone</th>
+                <th>Pedidos</th>
+                <th>Última compra</th>
+                <th></th>
+            </tr>
+        </thead>
+        <tbody>
+            @foreach (var c in _filtrados)
+            {
+                <tr>
+                    <td>
+                        <div class="row-user">
+                            <UserAvatar Nome="@c.Nome" />
+                            <strong>@c.Nome</strong>
+                        </div>
+                    </td>
+                    <td>@c.Telefone</td>
+                    <td>@c.TotalPedidos</td>
+                    <td>@(c.UltimaCompra?.ToString("dd/MM/yyyy") ?? "—")</td>
+                    <td>
+                        <button class="btn-icon" @onclick="() => Editar(c.Id)">✏️</button>
+                        <button class="btn-icon" @onclick="() => Excluir(c.Id)">🗑️</button>
+                    </td>
+                </tr>
+            }
+        </tbody>
+    </table>
+</div>
+
+@code {
+    private List<ClienteComResumo> _lista = [];
+    private List<ClienteComResumo> _filtrados = [];
+    private string _busca = "";
+
+    protected override async Task OnInitializedAsync() => await Carregar();
+
+    private async Task Carregar()
+    {
+        _lista = await Clientes.ListarComResumoAsync();
+        Filtrar();
+    }
+
+    private void Filtrar()
+    {
+        _filtrados = string.IsNullOrWhiteSpace(_busca)
+            ? _lista
+            : _lista.Where(c => c.Nome.Contains(_busca, StringComparison.OrdinalIgnoreCase)).ToList();
+    }
+
+    private void Editar(int id) => Nav.NavigateTo($"/clientes/editar/{id}");
+
+    private async Task Excluir(int id)
+    {
+        await Clientes.ExcluirAsync(id);
+        await Carregar();
+    }
+}

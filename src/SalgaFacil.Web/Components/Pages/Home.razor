@@ -1,0 +1,105 @@
+﻿@page "/"
+@rendermode InteractiveServer
+@inject DashboardService Dashboard
+
+<PageTitle>Dashboard — SalgadosPro</PageTitle>
+
+@if (_dados == null)
+{
+    <p>Carregando...</p>
+}
+else
+{
+    <div class="page-header">
+        <div>
+            <h1>Dashboard</h1>
+            <p class="subtitle">@DateTime.Now.ToString("dddd, d 'de' MMMM 'de' yyyy", new System.Globalization.CultureInfo("pt-BR"))</p>
+        </div>
+    </div>
+
+    <div class="kpi-grid">
+        <div class="kpi-card">
+            <div class="label">Pedidos Hoje</div>
+            <div class="value">@_dados.PedidosHoje</div>
+            <div class="sub">@_dados.PedidosTotalAtivos no total</div>
+        </div>
+        <div class="kpi-card">
+            <div class="label">Em Produção</div>
+            <div class="value terracota">@_dados.EmProducao</div>
+            <div class="sub">pedidos ativos</div>
+        </div>
+        <div class="kpi-card">
+            <div class="label">Aguardando Início</div>
+            <div class="value terracota">@_dados.Aguardando</div>
+            <div class="sub">para iniciar</div>
+        </div>
+        <div class="kpi-card">
+            <div class="label">Receita Hoje</div>
+            <div class="value green">@_dados.ReceitaHoje.ToString("C", _ptBr)</div>
+            <div class="sub">semana: @_dados.ReceitaSemana.ToString("C", _ptBr)</div>
+        </div>
+    </div>
+
+    <div class="charts-row">
+        <div class="card">
+            <div class="card-title">Pedidos por dia — semana atual</div>
+            <div class="bar-chart">
+                @foreach (var dia in _dados.PedidosPorDia)
+                {
+                    var max = Math.Max(_dados.PedidosPorDia.Max(d => d.Quantidade), 1);
+                    var h = (int)(dia.Quantidade * 150.0 / max);
+                    <div class="bar-col">
+                        <div class="bar" style="height:@(h)px"></div>
+                        <span class="bar-label">@dia.Label</span>
+                    </div>
+                }
+            </div>
+        </div>
+        <div class="card">
+            <div class="card-title">Produtos mais vendidos</div>
+            @{
+                var cores = new[] { "#d4500f", "#eab308", "#0d9488", "#8b5cf6" };
+                var i = 0;
+            }
+            <div class="donut-legend">
+                @foreach (var p in _dados.ProdutosMaisVendidos)
+                {
+                    <div class="legend-item">
+                        <span class="legend-dot" style="background:@cores[i % cores.Length]"></span>
+                        <span>@p.Nome</span>
+                        <span class="legend-pct">@p.Percentual%</span>
+                    </div>
+                    i++;
+                }
+            </div>
+        </div>
+    </div>
+
+    <div class="card">
+        <div class="card-header-row">
+            <div class="card-title" style="margin:0">Próximas entregas</div>
+            <a href="/pedidos" class="link-action">Ver todos →</a>
+        </div>
+        <div class="delivery-list">
+            @foreach (var e in _dados.ProximasEntregas)
+            {
+                <div class="delivery-item">
+                    <UserAvatar Nome="@e.ClienteNome" />
+                    <div class="delivery-info">
+                        <strong>@e.ClienteNome</strong>
+                        <span>@e.ItensResumo</span>
+                    </div>
+                    <span class="delivery-valor">@e.Valor.ToString("C", _ptBr)</span>
+                    <StatusBadge Status="@e.Status" />
+                </div>
+            }
+        </div>
+    </div>
+}
+
+@code {
+    private DashboardDto? _dados;
+    private readonly System.Globalization.CultureInfo _ptBr = new("pt-BR");
+
+    protected override async Task OnInitializedAsync() => _dados = await Dashboard.ObterAsync();
+}

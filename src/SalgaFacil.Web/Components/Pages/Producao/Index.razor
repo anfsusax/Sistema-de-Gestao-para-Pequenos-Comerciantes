@@ -1,0 +1,101 @@
+@page "/producao"
+@rendermode InteractiveServer
+@inject PedidoService Pedidos
+
+<PageTitle>Produção — SalgadosPro</PageTitle>
+
+@if (_carregando)
+{
+    <p>Carregando...</p>
+}
+else
+{
+    <div class="page-header">
+        <div>
+            <h1>Produção</h1>
+            <p class="subtitle">@_pedidosAtivos.Count pedidos ativos · @_totalSalgados salgados para produzir</p>
+        </div>
+    </div>
+
+    <div class="kpi-grid" style="grid-template-columns:repeat(3,1fr)">
+        <div class="kpi-card">
+            <div class="label">Aguardando Início</div>
+            <div class="value terracota">@_aguardando</div>
+            <div class="sub">pedidos</div>
+        </div>
+        <div class="kpi-card">
+            <div class="label">Em Produção</div>
+            <div class="value blue">@_emProducao</div>
+            <div class="sub">pedidos</div>
+        </div>
+        <div class="kpi-card">
+            <div class="label">Total a Produzir</div>
+            <div class="value terracota">@_totalSalgados</div>
+            <div class="sub">salgados</div>
+        </div>
+    </div>
+
+    <div class="production-grid">
+        <div class="card">
+            <div class="card-title">Quantidade por Produto</div>
+            @{
+                var maxQtd = _porProduto.Count > 0 ? _porProduto.Max(p => p.QuantidadeTotal) : 1;
+            }
+            @foreach (var p in _porProduto)
+            {
+                <div class="progress-row">
+                    <div class="progress-header">
+                        <strong>@p.Nome</strong>
+                        <span>@p.PedidosIds.Count pedido(s) · @p.QuantidadeTotal un</span>
+                    </div>
+                    <div class="progress-bar">
+                        <div class="progress-fill" style="width:@(p.QuantidadeTotal * 100 / maxQtd)%"></div>
+                    </div>
+                </div>
+            }
+            @if (_porProduto.Count == 0)
+            {
+                <div class="empty-state"><p>Nenhum item em produção no momento.</p></div>
+            }
+        </div>
+
+        <div class="card">
+            <div class="card-title">Pedidos Ativos</div>
+            @foreach (var p in _pedidosAtivos)
+            {
+                <div class="active-order">
+                    <UserAvatar Nome="@p.Cliente.Nome" />
+                    <div style="flex:1">
+                        <strong>@p.Cliente.Nome</strong>
+                        <p style="font-size:12px;color:var(--text-muted);margin-top:4px">
+                            @string.Join(" · ", p.Itens.Select(i => $"{i.Quantidade}x {i.Descricao}"))
+                        </p>
+                    </div>
+                    <StatusBadge Status="@p.Status" />
+                </div>
+            }
+            @if (_pedidosAtivos.Count == 0)
+            {
+                <div class="empty-state"><p>Nenhum pedido ativo.</p></div>
+            }
+        </div>
+    </div>
+}
+
+@code {
+    private bool _carregando = true;
+    private List<Pedido> _pedidosAtivos = [];
+    private List<ProducaoPorProduto> _porProduto = [];
+    private int _aguardando, _emProducao, _totalSalgados;
+
+    protected override async Task OnInitializedAsync()
+    {
+        var todos = await Pedidos.ListarAsync();
+        _pedidosAtivos = todos.Where(p => p.Status is StatusPedido.Aguardando or StatusPedido.EmProducao).ToList();
+        _aguardando = _pedidosAtivos.Count(p => p.Status == StatusPedido.Aguardando);
+        _emProducao = _pedidosAtivos.Count(p => p.Status == StatusPedido.EmProducao);
+        _porProduto = await Pedidos.ObterProducaoPorProdutoAsync();
+        _totalSalgados = _porProduto.Sum(p => p.QuantidadeTotal);
+        _carregando = false;
+    }
+}

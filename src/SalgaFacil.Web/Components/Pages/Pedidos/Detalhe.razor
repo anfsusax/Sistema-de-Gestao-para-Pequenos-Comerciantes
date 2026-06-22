@@ -1,0 +1,89 @@
+@page "/pedidos/{Id:int}"
+@rendermode InteractiveServer
+@inject PedidoService Pedidos
+@inject NavigationManager Nav
+
+<PageTitle>Pedido #@Id — SalgadosPro</PageTitle>
+
+@if (_pedido == null)
+{
+    <p>Carregando...</p>
+}
+else
+{
+    <div class="page-header">
+        <div>
+            <h1>Pedido #@_pedido.Id.ToString("D4")</h1>
+            <p class="subtitle">@_pedido.Cliente.Nome — @_pedido.Data.ToString("dd/MM/yyyy")</p>
+        </div>
+        <a href="/pedidos" class="btn btn-secondary">← Voltar</a>
+    </div>
+
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px">
+        <div class="card">
+            <div class="card-title">Itens do Pedido</div>
+            <table class="data-table">
+                <thead>
+                    <tr><th>Produto</th><th>Qtd</th><th>Valor</th><th>Total</th></tr>
+                </thead>
+                <tbody>
+                    @foreach (var i in _pedido.Itens)
+                    {
+                        <tr>
+                            <td>@i.Descricao</td>
+                            <td>@i.Quantidade</td>
+                            <td>@i.ValorUnitario.ToString("C", _ptBr)</td>
+                            <td class="valor">@i.Total.ToString("C", _ptBr)</td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+            <div style="margin-top:16px;font-size:18px;font-weight:800">Total: @_pedido.Total.ToString("C", _ptBr)</div>
+        </div>
+
+        <div class="card">
+            <div class="card-title">Status</div>
+            <p style="margin-bottom:16px"><StatusBadge Status="@_pedido.Status" /></p>
+            <div style="display:flex;flex-direction:column;gap:10px">
+                @if (_pedido.Status == StatusPedido.Aguardando)
+                {
+                    <button class="btn btn-primary" @onclick="() => MudarStatus(StatusPedido.EmProducao)">Iniciar Produção</button>
+                }
+                @if (_pedido.Status == StatusPedido.EmProducao)
+                {
+                    <button class="btn btn-primary" @onclick="() => MudarStatus(StatusPedido.Pronto)">Finalizar Produção</button>
+                }
+                @if (_pedido.Status == StatusPedido.Pronto)
+                {
+                    <button class="btn btn-primary" @onclick="() => MudarStatus(StatusPedido.Entregue)">Marcar Entregue</button>
+                }
+                @if (_pedido.Status == StatusPedido.Entregue)
+                {
+                    <button class="btn btn-secondary" @onclick="() => MudarStatus(StatusPedido.Finalizado)">Finalizar</button>
+                }
+            </div>
+            <div style="margin-top:24px;padding-top:16px;border-top:1px solid var(--border)">
+                <p style="font-size:13px;color:var(--text-muted)"><strong>Cliente:</strong> @_pedido.Cliente.Nome</p>
+                <p style="font-size:13px;color:var(--text-muted)"><strong>Telefone:</strong> @_pedido.Cliente.Telefone</p>
+                @if (_pedido.Cliente.Endereco != null)
+                {
+                    <p style="font-size:13px;color:var(--text-muted)"><strong>Endereço:</strong> @_pedido.Cliente.Endereco</p>
+                }
+            </div>
+        </div>
+    </div>
+}
+
+@code {
+    [Parameter] public int Id { get; set; }
+    private Pedido? _pedido;
+    private readonly System.Globalization.CultureInfo _ptBr = new("pt-BR");
+
+    protected override async Task OnInitializedAsync() => _pedido = await Pedidos.ObterAsync(Id);
+
+    private async Task MudarStatus(StatusPedido status)
+    {
+        await Pedidos.AtualizarStatusAsync(Id, status);
+        _pedido = await Pedidos.ObterAsync(Id);
+    }
+}

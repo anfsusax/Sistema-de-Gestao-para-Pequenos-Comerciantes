@@ -1,0 +1,106 @@
+@page "/produtos"
+@rendermode InteractiveServer
+@inject ProdutoService Produtos
+@inject NavigationManager Nav
+
+<PageTitle>Produtos — SalgadosPro</PageTitle>
+
+<div class="page-header">
+    <div>
+        <h1>Produtos</h1>
+        <p class="subtitle">@_lista.Count(p => p.Ativo) ativos</p>
+    </div>
+    <a href="/produtos/novo" class="btn btn-primary">+ Novo Produto</a>
+</div>
+
+<div class="card table-card">
+    <div class="table-toolbar">
+        <div class="search-input">
+            <span>🔍</span>
+            <input placeholder="Buscar produto..." @bind="_busca" @bind:event="oninput" @onkeyup="Filtrar" />
+        </div>
+        <div class="filter-chips">
+            <button class="chip @(_tipoFiltro == null ? "active" : "")" @onclick='() => SetTipo(null)'>Todos</button>
+            <button class="chip @(_tipoFiltro == "Frito" ? "active" : "")" @onclick='() => SetTipo("Frito")'>Fritos</button>
+            <button class="chip @(_tipoFiltro == "Assado" ? "active" : "")" @onclick='() => SetTipo("Assado")'>Assados</button>
+        </div>
+        <div class="filter-chips" style="margin-left:auto">
+            <button class="chip @(_statusFiltro == null ? "active" : "")" @onclick="() => SetStatus(null)">Todos</button>
+            <button class="chip @(_statusFiltro == true ? "active" : "")" @onclick="() => SetStatus(true)">Ativos</button>
+            <button class="chip @(_statusFiltro == false ? "active" : "")" @onclick="() => SetStatus(false)">Inativos</button>
+        </div>
+    </div>
+    <table class="data-table">
+        <thead>
+            <tr>
+                <th>Produto</th>
+                <th>Categoria</th>
+                <th>Tipo</th>
+                <th>Preço</th>
+                <th>Custo</th>
+                <th>Lucro/un.</th>
+                <th>Status</th>
+                <th></th>
+            </tr>
+        </thead>
+        <tbody>
+            @foreach (var p in _filtrados)
+            {
+                <tr>
+                    <td><strong>@p.Nome</strong></td>
+                    <td>@p.Categoria</td>
+                    <td><TipoBadge Tipo="@p.Tipo" /></td>
+                    <td class="valor">@p.PrecoVenda.ToString("C", _ptBr)</td>
+                    <td class="custo">@p.CustoEstimado.ToString("C", _ptBr)</td>
+                    <td class="lucro">@((p.PrecoVenda - p.CustoEstimado).ToString("C", _ptBr))</td>
+                    <td><span class="badge @(p.Ativo ? "badge-ativo" : "badge-inativo")">@(p.Ativo ? "Ativo" : "Inativo")</span></td>
+                    <td>
+                        <button class="btn-icon" title="Editar" @onclick="() => Editar(p.Id)">✏️</button>
+                        <button class="btn-icon" title="Excluir" @onclick="() => Excluir(p.Id)">🗑️</button>
+                    </td>
+                </tr>
+            }
+        </tbody>
+    </table>
+</div>
+
+@code {
+    private List<Produto> _lista = [];
+    private List<Produto> _filtrados = [];
+    private string? _tipoFiltro;
+    private bool? _statusFiltro;
+    private string _busca = "";
+    private readonly System.Globalization.CultureInfo _ptBr = new("pt-BR");
+
+    protected override async Task OnInitializedAsync() => await Carregar();
+
+    private async Task Carregar()
+    {
+        _lista = await Produtos.ListarAsync();
+        Filtrar();
+    }
+
+    private async Task SetTipo(string? tipo) { _tipoFiltro = tipo; await AplicarFiltros(); }
+    private async Task SetStatus(bool? ativo) { _statusFiltro = ativo; await AplicarFiltros(); }
+
+    private async Task AplicarFiltros()
+    {
+        _lista = await Produtos.ListarAsync(_tipoFiltro, _statusFiltro);
+        Filtrar();
+    }
+
+    private void Filtrar()
+    {
+        _filtrados = string.IsNullOrWhiteSpace(_busca)
+            ? _lista
+            : _lista.Where(p => p.Nome.Contains(_busca, StringComparison.OrdinalIgnoreCase)).ToList();
+    }
+
+    private void Editar(int id) => Nav.NavigateTo($"/produtos/editar/{id}");
+
+    private async Task Excluir(int id)
+    {
+        await Produtos.ExcluirAsync(id);
+        await Carregar();
+    }
+}

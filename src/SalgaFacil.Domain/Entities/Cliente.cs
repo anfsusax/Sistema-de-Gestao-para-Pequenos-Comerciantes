@@ -1,0 +1,12 @@
+namespace SalgaFacil.Domain.Entities;
+
+public class Cliente
+{
+    public int Id { get; set; }
+    public string Nome { get; set; } = string.Empty;
+    public string Telefone { get; set; } = string.Empty;
+    public string? Endereco { get; set; }
+    public string? Observacoes { get; set; }
+    public DateTime CriadoEm { get; set; } = DateTime.UtcNow;
+    public ICollection<Pedido> Pedidos { get; set; } = [];
+}

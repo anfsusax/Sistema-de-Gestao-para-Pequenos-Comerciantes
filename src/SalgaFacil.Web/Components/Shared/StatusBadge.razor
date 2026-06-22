@@ -1,0 +1,26 @@
+@using SalgaFacil.Domain.Enums
+
+<span class="badge @CssClass">@Label</span>
+
+@code {
+    [Parameter] public StatusPedido Status { get; set; }
+
+    private string Label => Status switch
+    {
+        StatusPedido.Aguardando => "Aguardando",
+        StatusPedido.EmProducao => "Em Produção",
+        StatusPedido.Pronto => "Pronto",
+        StatusPedido.Entregue => "Entregue",
+        StatusPedido.Finalizado => "Finalizado",
+        _ => Status.ToString()
+    };
+
+    private string CssClass => Status switch
+    {
+        StatusPedido.Aguardando => "badge-aguardando",
+        StatusPedido.EmProducao => "badge-producao",
+        StatusPedido.Pronto => "badge-pronto",
+        StatusPedido.Entregue => "badge-entregue",
+        _ => "badge-finalizado"
+    };
+}

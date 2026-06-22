@@ -1,0 +1,56 @@
+@page "/clientes/novo"
+@page "/clientes/editar/{Id:int}"
+@rendermode InteractiveServer
+@inject ClienteService Clientes
+@inject NavigationManager Nav
+
+<PageTitle>@(_editando ? "Editar" : "Novo") Cliente — SalgadosPro</PageTitle>
+
+<div class="page-header">
+    <div><h1>@(_editando ? "Editar Cliente" : "Novo Cliente")</h1></div>
+    <a href="/clientes" class="btn btn-secondary">← Voltar</a>
+</div>
+
+<div class="card form-card">
+    <EditForm Model="_cliente" OnValidSubmit="Salvar">
+        <div class="form-group">
+            <label>Nome</label>
+            <InputText class="form-control" @bind-Value="_cliente.Nome" />
+        </div>
+        <div class="form-group">
+            <label>Telefone</label>
+            <InputText class="form-control" @bind-Value="_cliente.Telefone" placeholder="(11) 99999-0000" />
+        </div>
+        <div class="form-group">
+            <label>Endereço</label>
+            <InputText class="form-control" @bind-Value="_cliente.Endereco" />
+        </div>
+        <div class="form-group">
+            <label>Observações</label>
+            <InputTextArea class="form-control" @bind-Value="_cliente.Observacoes" rows="3" />
+        </div>
+        <button type="submit" class="btn btn-primary">Salvar</button>
+    </EditForm>
+</div>
+
+@code {
+    [Parameter] public int Id { get; set; }
+    private Cliente _cliente = new();
+    private bool _editando;
+
+    protected override async Task OnInitializedAsync()
+    {
+        if (Id > 0)
+        {
+            _editando = true;
+            var c = await Clientes.ObterAsync(Id);
+            if (c != null) _cliente = c;
+        }
+    }
+
+    private async Task Salvar()
+    {
+        await Clientes.SalvarAsync(_cliente);
+        Nav.NavigateTo("/clientes");
+    }
+}

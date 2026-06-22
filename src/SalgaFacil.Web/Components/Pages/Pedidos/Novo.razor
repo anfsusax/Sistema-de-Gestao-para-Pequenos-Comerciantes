@@ -1,0 +1,116 @@
+@page "/pedidos/novo"
+@rendermode InteractiveServer
+@inject PedidoService Pedidos
+@inject ClienteService Clientes
+@inject ProdutoService Produtos
+@inject NavigationManager Nav
+
+<PageTitle>Novo Pedido — SalgadosPro</PageTitle>
+
+<div class="page-header">
+    <div><h1>Novo Pedido</h1></div>
+    <a href="/pedidos" class="btn btn-secondary">← Voltar</a>
+</div>
+
+<div class="card form-card" style="max-width:720px">
+    <div class="form-group">
+        <label>Cliente</label>
+        <select class="form-control" @bind="_clienteId">
+            <option value="0">Selecione o cliente...</option>
+            @foreach (var c in _clientes)
+            {
+                <option value="@c.Id">@c.Nome</option>
+            }
+        </select>
+    </div>
+
+    <div class="form-group">
+        <label>Produtos</label>
+        @foreach (var (item, idx) in _itens.Select((v, i) => (v, i)))
+        {
+            <div class="form-row" style="margin-bottom:12px;align-items:end">
+                <div class="form-group" style="margin:0">
+                    <select class="form-control" @bind="item.ProdutoId" @bind:after="() => AtualizarItem(item)">
+                        <option value="0">Selecione...</option>
+                        @foreach (var p in _produtos)
+                        {
+                            <option value="@p.Id">@p.Nome — @p.PrecoVenda.ToString("C", _ptBr)</option>
+                        }
+                    </select>
+                </div>
+                <div class="form-group" style="margin:0">
+                    <InputNumber class="form-control" @bind-Value="item.Quantidade" @bind-Value:after="() => AtualizarItem(item)" placeholder="Qtd" />
+                </div>
+                <div style="padding:10px 0;font-weight:700;min-width:100px;text-align:right">
+                    @item.Total.ToString("C", _ptBr)
+                </div>
+                @if (_itens.Count > 1)
+                {
+                    <button type="button" class="btn-icon" @onclick="() => RemoverItem(idx)">✕</button>
+                }
+            </div>
+        }
+        <button type="button" class="link-action" style="border:none;background:none" @onclick="AdicionarItem">+ Adicionar item</button>
+    </div>
+
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-top:24px;padding-top:20px;border-top:1px solid var(--border)">
+        <strong style="font-size:18px">Total: @_total.ToString("C", _ptBr)</strong>
+        <button class="btn btn-primary" @onclick="Confirmar" disabled="@(_clienteId == 0 || _total == 0)">Confirmar Pedido</button>
+    </div>
+</div>
+
+@code {
+    private List<Cliente> _clientes = [];
+    private List<Produto> _produtos = [];
+    private int _clienteId;
+    private List<ItemLinha> _itens = [new()];
+    private decimal _total;
+    private readonly System.Globalization.CultureInfo _ptBr = new("pt-BR");
+
+    protected override async Task OnInitializedAsync()
+    {
+        _clientes = await Clientes.ListarAsync();
+        _produtos = await Produtos.ListarAsync(apenasAtivos: true);
+    }
+
+    private void AdicionarItem() => _itens.Add(new ItemLinha());
+    private void RemoverItem(int idx) { _itens.RemoveAt(idx); Recalcular(); }
+
+    private void AtualizarItem(ItemLinha item)
+    {
+        var prod = _produtos.FirstOrDefault(p => p.Id == item.ProdutoId);
+        if (prod != null)
+        {
+            item.ValorUnitario = prod.PrecoVenda;
+            item.Descricao = prod.Nome;
+        }
+        item.Total = item.Quantidade * item.ValorUnitario;
+        Recalcular();
+    }
+
+    private void Recalcular() => _total = _itens.Sum(i => i.Total);
+
+    private async Task Confirmar()
+    {
+        var itens = _itens.Where(i => i.ProdutoId > 0 && i.Quantidade > 0).Select(i => new NovoPedidoItem
+        {
+            ProdutoId = i.ProdutoId,
+            Descricao = i.Descricao,
+            Quantidade = i.Quantidade,
+            ValorUnitario = i.ValorUnitario
+        }).ToList();
+
+        if (itens.Count == 0) return;
+        await Pedidos.CriarAsync(_clienteId, itens);
+        Nav.NavigateTo("/pedidos");
+    }
+
+    private class ItemLinha
+    {
+        public int ProdutoId { get; set; }
+        public string Descricao { get; set; } = "";
+        public int Quantidade { get; set; } = 1;
+        public decimal ValorUnitario { get; set; }
+        public decimal Total { get; set; }
+    }
+}

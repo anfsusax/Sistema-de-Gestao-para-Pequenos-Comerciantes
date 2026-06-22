@@ -1,0 +1,64 @@
+@page "/configuracoes"
+@rendermode InteractiveServer
+@inject EmpresaService Empresa
+@inject AuthService Auth
+@inject NavigationManager Nav
+
+<PageTitle>Configurações — SalgadosPro</PageTitle>
+
+<div class="page-header">
+    <div><h1>Configurações</h1><p class="subtitle">Dados da empresa e conta</p></div>
+</div>
+
+@if (_empresa != null)
+{
+    <div class="card form-card">
+        <div class="card-title">Empresa</div>
+        <EditForm Model="_empresa" OnValidSubmit="SalvarEmpresa">
+            <div class="form-group">
+                <label>Nome da Empresa</label>
+                <InputText class="form-control" @bind-Value="_empresa.Nome" />
+            </div>
+            <div class="form-row">
+                <div class="form-group">
+                    <label>Telefone</label>
+                    <InputText class="form-control" @bind-Value="_empresa.Telefone" />
+                </div>
+                <div class="form-group">
+                    <label>Email</label>
+                    <InputText class="form-control" @bind-Value="_empresa.Email" />
+                </div>
+            </div>
+            <div class="form-group">
+                <label>Endereço</label>
+                <InputText class="form-control" @bind-Value="_empresa.Endereco" />
+            </div>
+            <button type="submit" class="btn btn-primary">Salvar</button>
+        </EditForm>
+    </div>
+
+    <div class="card form-card" style="margin-top:16px">
+        <div class="card-title">Conta</div>
+        <p style="font-size:14px;margin-bottom:16px">
+            Logado como <strong>@Auth.UsuarioAtual?.Nome</strong> (@Auth.UsuarioAtual?.Email)
+        </p>
+        <button class="btn btn-secondary" @onclick="Sair">Sair da conta</button>
+    </div>
+}
+
+@code {
+    private Empresa? _empresa;
+
+    protected override async Task OnInitializedAsync() => _empresa = await Empresa.ObterAsync() ?? new Empresa();
+
+    private async Task SalvarEmpresa()
+    {
+        if (_empresa != null) await Empresa.SalvarAsync(_empresa);
+    }
+
+    private void Sair()
+    {
+        Auth.Logout();
+        Nav.NavigateTo("/login");
+    }
+}
