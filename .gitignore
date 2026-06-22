@@ -13,6 +13,7 @@ obj/
 # IDE
 .vs/
 .idea/
+.vscode/
 
 # OS
 Thumbs.db
