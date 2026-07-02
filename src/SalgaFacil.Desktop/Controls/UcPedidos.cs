@@ -23,20 +23,24 @@ public class UcPedidos : UserControl
     private void BuildUi()
     {
         var pnlTopo = new Panel { Dock = DockStyle.Top, Height = 36 };
-        var titulo = new Label { Text = "Lista de Pedidos", Font = WinStyles.FonteTitulo, AutoSize = true, Location = new Point(0, 4) };
-        var btnNovo = WinStyles.CriarBotao("Novo Pedido", true);
-        btnNovo.Location = new Point(820, 4);
-        btnNovo.Click += (_, _) => { using var f = new FrmNovoPedido(); if (f.ShowDialog(FindForm()) == DialogResult.OK) Carregar(); };
-        pnlTopo.Controls.AddRange([titulo, btnNovo]);
+        var titulo = new Label { Text = "Lista de Pedidos", Font = WinStyles.FonteTitulo, AutoSize = true, Dock = DockStyle.Left };
 
-        var pnlFiltro = new Panel { Dock = DockStyle.Top, Height = 32 };
-        pnlFiltro.Controls.Add(new Label { Text = "Status:", Location = new Point(0, 8), AutoSize = true });
-        _cmbStatus = new ComboBox { Location = new Point(50, 4), Width = 130, DropDownStyle = ComboBoxStyle.DropDownList };
+        var pnlAcoes = WinStyles.CriarBarraAcoes();
+        var btnNovo = WinStyles.CriarBotao("Novo Pedido", true);
+        btnNovo.Click += (_, _) => { using var f = new FrmNovoPedido(); if (f.ShowDialog(FindForm()) == DialogResult.OK) Carregar(); };
+        pnlAcoes.Controls.Add(btnNovo);
+
+        pnlTopo.Controls.Add(pnlAcoes);
+        pnlTopo.Controls.Add(titulo);
+
+        var pnlFiltro = new FlowLayoutPanel { Dock = DockStyle.Top, Height = 32, FlowDirection = FlowDirection.LeftToRight, WrapContents = false, Padding = new Padding(0, 4, 0, 0) };
+        pnlFiltro.Controls.Add(new Label { Text = "Status:", AutoSize = true, Margin = new Padding(0, 6, 6, 0) });
+        _cmbStatus = new ComboBox { Width = 130, DropDownStyle = ComboBoxStyle.DropDownList, Margin = new Padding(0, 2, 16, 0) };
         _cmbStatus.Items.AddRange(["Todos", "Aguardando", "Em produção", "Pronto", "Entregue"]);
         _cmbStatus.SelectedIndex = 0;
         _cmbStatus.SelectedIndexChanged += (_, _) => Carregar();
-        pnlFiltro.Controls.Add(new Label { Text = "Data:", Location = new Point(200, 8), AutoSize = true });
-        _dtpData = new DateTimePicker { Location = new Point(240, 4), Width = 120, Format = DateTimePickerFormat.Short, ShowCheckBox = true, Checked = false };
+        pnlFiltro.Controls.Add(new Label { Text = "Data:", AutoSize = true, Margin = new Padding(0, 6, 6, 0) });
+        _dtpData = new DateTimePicker { Width = 120, Format = DateTimePickerFormat.Short, ShowCheckBox = true, Checked = false, Margin = new Padding(0, 2, 0, 0) };
         _dtpData.ValueChanged += (_, _) => Carregar();
         pnlFiltro.Controls.AddRange([_cmbStatus, _dtpData]);
 

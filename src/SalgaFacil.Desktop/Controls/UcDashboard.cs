@@ -16,7 +16,9 @@ public class UcDashboard : UserControl
 
         var titulo = new Label { Text = "Painel Principal", Font = WinStyles.FonteTitulo, AutoSize = true, Dock = DockStyle.Top, Margin = new Padding(0, 0, 0, 12) };
 
-        var pnlCards = new TableLayoutPanel { Dock = DockStyle.Top, Height = 80, ColumnCount = 4, RowCount = 1 };
+        // Height 92 (era 80): dá folga real pro card AutoSize (título + valor 18pt bold) nunca
+        // precisar cortar texto, mesmo em telas com DPI/scaling diferente do padrão.
+        var pnlCards = new TableLayoutPanel { Dock = DockStyle.Top, Height = 92, ColumnCount = 4, RowCount = 1 };
         pnlCards.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 25));
         pnlCards.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 25));
         pnlCards.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 25));

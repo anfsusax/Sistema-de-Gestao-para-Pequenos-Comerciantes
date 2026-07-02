@@ -13,6 +13,7 @@ public class UcClientes : UserControl
     public UcClientes()
     {
         BackColor = WinStyles.FundoGeral;
+        Font = WinStyles.FontePadrao;
         Dock = DockStyle.Fill;
         BuildUi();
         Carregar();
@@ -21,17 +22,21 @@ public class UcClientes : UserControl
     private void BuildUi()
     {
         var pnlTopo = new Panel { Dock = DockStyle.Top, Height = 36 };
-        var titulo = new Label { Text = "Cadastro de Clientes", Font = WinStyles.FonteTitulo, AutoSize = true, Location = new Point(0, 4) };
+        var titulo = new Label { Text = "Cadastro de Clientes", Font = WinStyles.FonteTitulo, AutoSize = true, Dock = DockStyle.Left };
+
+        var pnlAcoes = WinStyles.CriarBarraAcoes();
         var btnNovo = WinStyles.CriarBotao("Novo Cliente", true);
-        btnNovo.Location = new Point(700, 4);
         btnNovo.Click += (_, _) => AbrirModal(null);
         var btnEditar = WinStyles.CriarBotao("Editar");
-        btnEditar.Location = new Point(820, 4);
+        btnEditar.Margin = new Padding(6, 0, 0, 0);
         btnEditar.Click += (_, _) => Editar();
         var btnExcluir = WinStyles.CriarBotao("Excluir");
-        btnExcluir.Location = new Point(900, 4);
+        btnExcluir.Margin = new Padding(6, 0, 0, 0);
         btnExcluir.Click += (_, _) => Excluir();
-        pnlTopo.Controls.AddRange([titulo, btnNovo, btnEditar, btnExcluir]);
+        pnlAcoes.Controls.AddRange([btnNovo, btnEditar, btnExcluir]);
+
+        pnlTopo.Controls.Add(pnlAcoes);
+        pnlTopo.Controls.Add(titulo);
 
         var pnlGrid = new Panel { Dock = DockStyle.Fill, BackColor = WinStyles.PainelBranco, Margin = new Padding(0, 8, 0, 0) };
         pnlGrid.BorderStyle = BorderStyle.FixedSingle;

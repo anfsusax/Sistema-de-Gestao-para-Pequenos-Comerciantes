@@ -25,29 +25,31 @@ public class UcProdutos : UserControl
     private void BuildUi()
     {
         var pnlTopo = new Panel { Dock = DockStyle.Top, Height = 36 };
-        var titulo = new Label { Text = "Gestão de Produtos", Font = WinStyles.FonteTitulo, AutoSize = true, Location = new Point(0, 4) };
+        var titulo = new Label { Text = "Gestão de Produtos", Font = WinStyles.FonteTitulo, AutoSize = true, Dock = DockStyle.Left };
 
+        // Barra de ações ancorada à direita: nunca corta os botões, mesmo na largura mínima da janela
+        // (o Location fixo x=700/820/900 anterior cortava "Excluir" quando a janela era reduzida).
+        var pnlAcoes = WinStyles.CriarBarraAcoes();
         var btnNovo = WinStyles.CriarBotao("Novo Produto", true);
-        btnNovo.Location = new Point(700, 4);
         btnNovo.Click += (_, _) => AbrirModal(null);
-
         var btnEditar = WinStyles.CriarBotao("Editar");
-        btnEditar.Location = new Point(820, 4);
+        btnEditar.Margin = new Padding(6, 0, 0, 0);
         btnEditar.Click += (_, _) => EditarSelecionado();
-
         var btnExcluir = WinStyles.CriarBotao("Excluir");
-        btnExcluir.Location = new Point(900, 4);
+        btnExcluir.Margin = new Padding(6, 0, 0, 0);
         btnExcluir.Click += (_, _) => ExcluirSelecionado();
+        pnlAcoes.Controls.AddRange([btnNovo, btnEditar, btnExcluir]);
 
-        pnlTopo.Controls.AddRange([titulo, btnNovo, btnEditar, btnExcluir]);
+        pnlTopo.Controls.Add(pnlAcoes);
+        pnlTopo.Controls.Add(titulo);
 
-        var pnlFiltro = new Panel { Dock = DockStyle.Top, Height = 32 };
-        pnlFiltro.Controls.Add(new Label { Text = "Tipo:", AutoSize = true, Location = new Point(0, 8) });
-        _cmbTipo = new ComboBox { Location = new Point(40, 4), Width = 100, DropDownStyle = ComboBoxStyle.DropDownList };
+        var pnlFiltro = new FlowLayoutPanel { Dock = DockStyle.Top, Height = 32, FlowDirection = FlowDirection.LeftToRight, WrapContents = false, Padding = new Padding(0, 4, 0, 0) };
+        pnlFiltro.Controls.Add(new Label { Text = "Tipo:", AutoSize = true, Margin = new Padding(0, 6, 6, 0) });
+        _cmbTipo = new ComboBox { Width = 100, DropDownStyle = ComboBoxStyle.DropDownList, Margin = new Padding(0, 2, 16, 0) };
         _cmbTipo.Items.AddRange(["Todos", "Fritos", "Assados"]);
         _cmbTipo.SelectedIndex = 0;
         _cmbTipo.SelectedIndexChanged += (_, _) => Carregar();
-        _chkAtivos = new CheckBox { Text = "Apenas ativos", Location = new Point(160, 6), Checked = true, AutoSize = true };
+        _chkAtivos = new CheckBox { Text = "Apenas ativos", Checked = true, AutoSize = true, Margin = new Padding(0, 4, 0, 0) };
         _chkAtivos.CheckedChanged += (_, _) => Carregar();
         pnlFiltro.Controls.AddRange([_cmbTipo, _chkAtivos]);
 
@@ -68,8 +70,8 @@ public class UcProdutos : UserControl
             if (_grid.Columns[e.ColumnIndex].Name == "Status" && e.RowIndex >= 0)
             {
                 var ativo = e.Value?.ToString() == "Ativo";
-                e.CellStyle.BackColor = ativo ? Color.FromArgb(209, 250, 229) : Color.FromArgb(243, 244, 246);
-                e.CellStyle.ForeColor = ativo ? Color.FromArgb(6, 95, 70) : Color.FromArgb(75, 85, 99);
+                e.CellStyle.BackColor = ativo ? WinStyles.VerdeClaro : WinStyles.CinzaClaro;
+                e.CellStyle.ForeColor = ativo ? WinStyles.VerdeTexto : WinStyles.CinzaTexto;
                 e.CellStyle.Font = new Font("Segoe UI", 9F, FontStyle.Bold);
             }
         };

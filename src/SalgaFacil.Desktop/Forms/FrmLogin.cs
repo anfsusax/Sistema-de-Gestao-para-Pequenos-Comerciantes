@@ -17,7 +17,7 @@ public class FrmLogin : Form
     private void InitializeComponent()
     {
         Text = "SalgaPro — Login";
-        Size = new Size(420, 340);
+        Size = new Size(420, 420);
         StartPosition = FormStartPosition.CenterScreen;
         FormBorderStyle = FormBorderStyle.FixedDialog;
         MaximizeBox = false;
@@ -25,29 +25,46 @@ public class FrmLogin : Form
         BackColor = WinStyles.FundoGeral;
         Font = WinStyles.FontePadrao;
 
-        var lblLogo = new Label { Text = "🥟 SalgaPro", Font = new Font("Segoe UI", 16F, FontStyle.Bold), ForeColor = Color.FromArgb(30, 58, 95), AutoSize = true, Location = new Point(130, 24) };
-        var lblSub = new Label { Text = "Gestão Comercial", ForeColor = Color.Gray, AutoSize = true, Location = new Point(155, 52) };
+        // Cabeçalho com logo + subtítulo centralizados via Dock+TextAlign (sem calcular X manualmente
+        // como antes: Point(130,24)/Point(155,52) só funcionavam para um tamanho de fonte específico).
+        var pnlHeader = new Panel { Dock = DockStyle.Top, Height = 90 };
+        var lblSub = new Label { Text = "Gestão Comercial", ForeColor = WinStyles.TextoMuted, Dock = DockStyle.Top, Height = 24, TextAlign = ContentAlignment.MiddleCenter };
+        var lblLogo = new Label { Text = "🥟 SalgaPro", Font = new Font("Segoe UI", 16F, FontStyle.Bold), ForeColor = WinStyles.Navy, Dock = DockStyle.Top, Height = 50, TextAlign = ContentAlignment.MiddleCenter };
+        pnlHeader.Controls.Add(lblSub);
+        pnlHeader.Controls.Add(lblLogo);
 
-        var pnl = new Panel { BackColor = Color.White, BorderStyle = BorderStyle.FixedSingle, Location = new Point(40, 80), Size = new Size(330, 200) };
+        var pnlCorpo = new Panel { Dock = DockStyle.Fill, Padding = new Padding(40, 0, 40, 24) };
 
-        var lblEmail = new Label { Text = "Email", Location = new Point(16, 16), AutoSize = true };
-        _txtEmail = new TextBox { Location = new Point(16, 34), Width = 296, Text = "admin@salgapro.com" };
+        // BUG CORRIGIDO: "pnl" e "campos" estavam com Dock=Fill + AutoSize=true ao mesmo tempo —
+        // combinação contraditória em WinForms (Dock=Fill trava o tamanho ao espaço do pai,
+        // então AutoSize nunca tinha efeito e o conteúdo que não coubesse era cortado sem aviso;
+        // foi isso que cortou a caixa de Senha e escondeu os botões no print). Trocado para
+        // Dock=Top: fixa a Largura (igual ao pai) mas deixa a Altura livre para o AutoSize calcular
+        // a partir do conteúdo real.
+        var pnl = new Panel { Dock = DockStyle.Top, AutoSize = true, AutoSizeMode = AutoSizeMode.GrowAndShrink, BackColor = Color.White, BorderStyle = BorderStyle.FixedSingle, Padding = new Padding(16) };
 
-        var lblSenha = new Label { Text = "Senha", Location = new Point(16, 68), AutoSize = true };
-        _txtSenha = new TextBox { Location = new Point(16, 86), Width = 296, PasswordChar = '●', Text = "123456" };
+        var campos = new FlowLayoutPanel { Dock = DockStyle.Top, FlowDirection = FlowDirection.TopDown, WrapContents = false, AutoSize = true, AutoSizeMode = AutoSizeMode.GrowAndShrink };
 
+        _txtEmail = new TextBox { Width = 280, Text = "admin@salgapro.com" };
+        WinStyles.AdicionarCampo(campos, "Email", _txtEmail);
+
+        _txtSenha = new TextBox { Width = 280, PasswordChar = '●', Text = "123456" };
+        WinStyles.AdicionarCampo(campos, "Senha", _txtSenha);
+
+        var pnlBotoes = new FlowLayoutPanel { FlowDirection = FlowDirection.LeftToRight, WrapContents = false, AutoSize = true, AutoSizeMode = AutoSizeMode.GrowAndShrink, Margin = new Padding(0, 14, 0, 0) };
         var btnEntrar = WinStyles.CriarBotao("Entrar", true);
-        btnEntrar.Location = new Point(16, 130);
-        btnEntrar.Width = 140;
         btnEntrar.Click += BtnEntrar_Click;
-
         var btnRecuperar = WinStyles.CriarBotao("Recuperar senha");
-        btnRecuperar.Location = new Point(172, 130);
-        btnRecuperar.Width = 140;
+        btnRecuperar.Margin = new Padding(8, 0, 0, 0);
         btnRecuperar.Click += (_, _) => MessageBox.Show("Entre em contato com o administrador.", "Recuperar senha", MessageBoxButtons.OK, MessageBoxIcon.Information);
+        pnlBotoes.Controls.AddRange([btnEntrar, btnRecuperar]);
+        campos.Controls.Add(pnlBotoes);
 
-        pnl.Controls.AddRange([lblEmail, _txtEmail, lblSenha, _txtSenha, btnEntrar, btnRecuperar]);
-        Controls.AddRange([lblLogo, lblSub, pnl]);
+        pnl.Controls.Add(campos);
+        pnlCorpo.Controls.Add(pnl);
+
+        Controls.Add(pnlCorpo);
+        Controls.Add(pnlHeader);
         AcceptButton = btnEntrar;
     }
 

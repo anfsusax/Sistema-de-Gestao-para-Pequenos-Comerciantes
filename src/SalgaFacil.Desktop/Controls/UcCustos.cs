@@ -18,11 +18,12 @@ public class UcCustos : UserControl
     {
         var titulo = new Label { Text = "Controle de Custos", Font = WinStyles.FonteTitulo, Dock = DockStyle.Top, Height = 32 };
 
-        var pnlCards = new TableLayoutPanel { Dock = DockStyle.Top, Height = 70, ColumnCount = 2 };
+        // Height 86 (era 70): mesma folga aplicada ao card do Dashboard, evita corte de texto.
+        var pnlCards = new TableLayoutPanel { Dock = DockStyle.Top, Height = 86, ColumnCount = 2 };
         pnlCards.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 50));
         pnlCards.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 50));
-        pnlCards.Controls.Add(WinStyles.CriarCardMetrica("Custo Mensal", _service.CustoMensal.ToString("C", new System.Globalization.CultureInfo("pt-BR")), Color.FromArgb(220, 38, 38)), 0, 0);
-        pnlCards.Controls.Add(WinStyles.CriarCardMetrica("Venda Mensal", _service.VendaMensal.ToString("C", new System.Globalization.CultureInfo("pt-BR")), Color.FromArgb(21, 128, 61)), 1, 0);
+        pnlCards.Controls.Add(WinStyles.CriarCardMetrica("Custo Mensal", _service.CustoMensal.ToString("C", new System.Globalization.CultureInfo("pt-BR")), WinStyles.Terracota), 0, 0);
+        pnlCards.Controls.Add(WinStyles.CriarCardMetrica("Venda Mensal", _service.VendaMensal.ToString("C", new System.Globalization.CultureInfo("pt-BR")), WinStyles.Verde), 1, 0);
 
         var pnlGrid = new Panel { Dock = DockStyle.Fill, BackColor = WinStyles.PainelBranco, Margin = new Padding(0, 8, 0, 0) };
         pnlGrid.BorderStyle = BorderStyle.FixedSingle;
@@ -38,7 +39,7 @@ public class UcCustos : UserControl
         {
             if (_gridCol(grid, e.ColumnIndex) == "Margem" && e.RowIndex >= 0)
             {
-                e.CellStyle.ForeColor = Color.FromArgb(21, 128, 61);
+                e.CellStyle.ForeColor = WinStyles.Verde;
                 e.CellStyle.Font = new Font("Segoe UI", 9F, FontStyle.Bold);
             }
         };

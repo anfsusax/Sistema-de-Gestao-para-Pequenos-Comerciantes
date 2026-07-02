@@ -27,26 +27,34 @@ public class FrmCadastroCliente : Form
     private void InitializeComponent()
     {
         Text = "Cadastro de Cliente";
-        Size = new Size(480, 380);
+        Size = new Size(480, 420);
         FormBorderStyle = FormBorderStyle.FixedDialog;
         StartPosition = FormStartPosition.CenterParent;
         MaximizeBox = false;
         MinimizeBox = false;
-        BackColor = Color.FromArgb(245, 245, 245);
+        BackColor = WinStyles.FundoGeral;
         Font = WinStyles.FontePadrao;
 
-        int y = 16;
-        Controls.Add(Lbl("Nome", 16, y)); y += 18;
-        _txtNome = new TextBox { Location = new Point(16, y), Width = 430, Text = _cliente.Nome }; Controls.Add(_txtNome); y += 32;
-        Controls.Add(Lbl("Telefone", 16, y)); y += 18;
-        _txtTelefone = new TextBox { Location = new Point(16, y), Width = 430, Text = _cliente.Telefone }; Controls.Add(_txtTelefone); y += 32;
-        Controls.Add(Lbl("Endereço", 16, y)); y += 18;
-        _txtEndereco = new TextBox { Location = new Point(16, y), Width = 430, Text = _cliente.Endereco }; Controls.Add(_txtEndereco); y += 32;
-        Controls.Add(Lbl("Observação", 16, y)); y += 18;
-        _txtObs = new TextBox { Location = new Point(16, y), Width = 430, Height = 60, Multiline = true, Text = _cliente.Observacao }; Controls.Add(_txtObs); y += 72;
+        // BUG CORRIGIDO: "corpo" estava com Dock=Fill + AutoSize=true ao mesmo tempo — combinação
+        // contraditória em WinForms que cortava o conteúdo que não coubesse (mesma causa do bug
+        // encontrado em FrmLogin.cs: botão "Salvar"/"Cancelar" ficavam fora da área visível).
+        // Dock=Top fixa a Largura (igual à janela) e deixa a Altura livre pro AutoSize.
+        var corpo = new FlowLayoutPanel { Dock = DockStyle.Top, FlowDirection = FlowDirection.TopDown, WrapContents = false, AutoSize = true, AutoSizeMode = AutoSizeMode.GrowAndShrink, Padding = new Padding(16) };
 
+        _txtNome = new TextBox { Width = 430, Text = _cliente.Nome };
+        WinStyles.AdicionarCampo(corpo, "Nome", _txtNome);
+
+        _txtTelefone = new TextBox { Width = 430, Text = _cliente.Telefone };
+        WinStyles.AdicionarCampo(corpo, "Telefone", _txtTelefone);
+
+        _txtEndereco = new TextBox { Width = 430, Text = _cliente.Endereco };
+        WinStyles.AdicionarCampo(corpo, "Endereço", _txtEndereco);
+
+        _txtObs = new TextBox { Width = 430, Height = 60, Multiline = true, Text = _cliente.Observacao };
+        WinStyles.AdicionarCampo(corpo, "Observação", _txtObs);
+
+        var pnlBotoes = new FlowLayoutPanel { FlowDirection = FlowDirection.LeftToRight, WrapContents = false, AutoSize = true, AutoSizeMode = AutoSizeMode.GrowAndShrink, Margin = new Padding(0, 16, 0, 0) };
         var btnSalvar = WinStyles.CriarBotao("Salvar", true);
-        btnSalvar.Location = new Point(260, y);
         btnSalvar.Click += (_, _) =>
         {
             if (string.IsNullOrWhiteSpace(_txtNome.Text)) { MessageBox.Show("Nome é obrigatório."); return; }
@@ -60,10 +68,11 @@ public class FrmCadastroCliente : Form
             Close();
         };
         var btnCancelar = WinStyles.CriarBotao("Cancelar");
-        btnCancelar.Location = new Point(350, y);
+        btnCancelar.Margin = new Padding(8, 0, 0, 0);
         btnCancelar.Click += (_, _) => { DialogResult = DialogResult.Cancel; Close(); };
-        Controls.AddRange([btnSalvar, btnCancelar]);
-    }
+        pnlBotoes.Controls.AddRange([btnSalvar, btnCancelar]);
+        corpo.Controls.Add(pnlBotoes);
 
-    private static Label Lbl(string t, int x, int y) => new() { Text = t, Location = new Point(x, y), AutoSize = true, Font = new Font("Segoe UI", 8F) };
+        Controls.Add(corpo);
+    }
 }

@@ -32,53 +32,56 @@ public class FrmCadastroProduto : Form
     private void InitializeComponent()
     {
         Text = "Cadastro de Produto";
-        Size = new Size(500, 420);
+        Size = new Size(500, 460);
         FormBorderStyle = FormBorderStyle.FixedDialog;
         StartPosition = FormStartPosition.CenterParent;
         MaximizeBox = false;
         MinimizeBox = false;
-        BackColor = Color.FromArgb(245, 245, 245);
+        BackColor = WinStyles.FundoGeral;
         Font = WinStyles.FontePadrao;
 
-        int y = 16;
-        Controls.Add(CriarLabel("Nome", 16, y)); y += 18;
-        _txtNome = new TextBox { Location = new Point(16, y), Width = 450, Text = _produto.Nome }; Controls.Add(_txtNome); y += 32;
+        // BUG CORRIGIDO: "corpo" estava com Dock=Fill + AutoSize=true ao mesmo tempo — combinação
+        // contraditória em WinForms que cortava o conteúdo que não coubesse (botões "Salvar"/
+        // "Cancelar" ficavam fora da área visível). Dock=Top fixa a Largura e deixa a Altura
+        // livre pro AutoSize calcular a partir do conteúdo real.
+        var corpo = new FlowLayoutPanel { Dock = DockStyle.Top, FlowDirection = FlowDirection.TopDown, WrapContents = false, AutoSize = true, AutoSizeMode = AutoSizeMode.GrowAndShrink, Padding = new Padding(16) };
 
-        Controls.Add(CriarLabel("Categoria", 16, y));
-        _cmbCategoria = new ComboBox { Location = new Point(16, y + 18), Width = 200, DropDownStyle = ComboBoxStyle.DropDownList };
+        _txtNome = new TextBox { Width = 450, Text = _produto.Nome };
+        WinStyles.AdicionarCampo(corpo, "Nome", _txtNome);
+
+        _cmbCategoria = new ComboBox { Width = 200, DropDownStyle = ComboBoxStyle.DropDownList };
         _cmbCategoria.Items.AddRange(["Salgado", "Doce", "Bebida"]);
         _cmbCategoria.SelectedItem = _produto.Categoria;
         if (_cmbCategoria.SelectedIndex < 0) _cmbCategoria.SelectedIndex = 0;
-        Controls.Add(_cmbCategoria);
 
-        Controls.Add(CriarLabel("Tipo", 240, y));
-        _rbFrito = new RadioButton { Text = "Frito", Location = new Point(240, y + 20), AutoSize = true, Checked = _produto.Tipo == TipoProduto.Frito };
-        _rbAssado = new RadioButton { Text = "Assado", Location = new Point(320, y + 20), AutoSize = true, Checked = _produto.Tipo == TipoProduto.Assado };
-        Controls.AddRange([_rbFrito, _rbAssado]); y += 52;
+        var pnlTipo = new FlowLayoutPanel { FlowDirection = FlowDirection.LeftToRight, WrapContents = false, AutoSize = true, AutoSizeMode = AutoSizeMode.GrowAndShrink, Margin = new Padding(0) };
+        _rbFrito = new RadioButton { Text = "Frito", AutoSize = true, Checked = _produto.Tipo == TipoProduto.Frito };
+        _rbAssado = new RadioButton { Text = "Assado", AutoSize = true, Margin = new Padding(12, 0, 0, 0), Checked = _produto.Tipo == TipoProduto.Assado };
+        pnlTipo.Controls.AddRange([_rbFrito, _rbAssado]);
 
-        Controls.Add(CriarLabel("Preço Venda", 16, y));
-        Controls.Add(CriarLabel("Custo Estimado", 240, y)); y += 18;
-        _txtPreco = new TextBox { Location = new Point(16, y), Width = 200, Text = _produto.PrecoVenda > 0 ? _produto.PrecoVenda.ToString("F2") : "" };
-        _txtCusto = new TextBox { Location = new Point(240, y), Width = 200, Text = _produto.CustoEstimado > 0 ? _produto.CustoEstimado.ToString("F2") : "" };
-        Controls.AddRange([_txtPreco, _txtCusto]); y += 32;
+        corpo.Controls.Add(WinStyles.CriarLinhaDupla("Categoria", _cmbCategoria, "Tipo", pnlTipo));
 
-        Controls.Add(CriarLabel("Descrição", 16, y)); y += 18;
-        _txtDescricao = new TextBox { Location = new Point(16, y), Width = 450, Height = 60, Multiline = true, Text = _produto.Descricao };
-        Controls.Add(_txtDescricao); y += 72;
+        _txtPreco = new TextBox { Width = 200, Text = _produto.PrecoVenda > 0 ? _produto.PrecoVenda.ToString("F2") : "" };
+        _txtCusto = new TextBox { Width = 200, Text = _produto.CustoEstimado > 0 ? _produto.CustoEstimado.ToString("F2") : "" };
+        corpo.Controls.Add(WinStyles.CriarLinhaDupla("Preço Venda", _txtPreco, "Custo Estimado", _txtCusto));
 
-        _chkAtivo = new CheckBox { Text = "Status Ativo", Location = new Point(16, y), Checked = _produto.Status == StatusProduto.Ativo, AutoSize = true };
-        Controls.Add(_chkAtivo); y += 36;
+        _txtDescricao = new TextBox { Width = 450, Height = 60, Multiline = true, Text = _produto.Descricao };
+        WinStyles.AdicionarCampo(corpo, "Descrição", _txtDescricao);
 
+        _chkAtivo = new CheckBox { Text = "Status Ativo", Checked = _produto.Status == StatusProduto.Ativo, AutoSize = true, Margin = new Padding(0, 12, 0, 0) };
+        corpo.Controls.Add(_chkAtivo);
+
+        var pnlBotoes = new FlowLayoutPanel { FlowDirection = FlowDirection.LeftToRight, WrapContents = false, AutoSize = true, AutoSizeMode = AutoSizeMode.GrowAndShrink, Margin = new Padding(0, 16, 0, 0) };
         var btnSalvar = WinStyles.CriarBotao("Salvar", true);
-        btnSalvar.Location = new Point(280, y);
         btnSalvar.Click += BtnSalvar_Click;
         var btnCancelar = WinStyles.CriarBotao("Cancelar");
-        btnCancelar.Location = new Point(370, y);
+        btnCancelar.Margin = new Padding(8, 0, 0, 0);
         btnCancelar.Click += (_, _) => { DialogResult = DialogResult.Cancel; Close(); };
-        Controls.AddRange([btnSalvar, btnCancelar]);
-    }
+        pnlBotoes.Controls.AddRange([btnSalvar, btnCancelar]);
+        corpo.Controls.Add(pnlBotoes);
 
-    private static Label CriarLabel(string t, int x, int y) => new() { Text = t, Location = new Point(x, y), AutoSize = true, Font = new Font("Segoe UI", 8F) };
+        Controls.Add(corpo);
+    }
 
     private void BtnSalvar_Click(object? sender, EventArgs e)
     {

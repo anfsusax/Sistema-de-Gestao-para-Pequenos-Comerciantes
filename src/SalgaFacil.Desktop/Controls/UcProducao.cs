@@ -24,14 +24,11 @@ public class UcProducao : UserControl
     {
         var titulo = new Label { Text = "Controle de Produção", Font = WinStyles.FonteTitulo, Dock = DockStyle.Top, Height = 32 };
 
-        var pnlCards = new TableLayoutPanel { Dock = DockStyle.Top, Height = 70, ColumnCount = 3 };
+        var pnlCards = new TableLayoutPanel { Dock = DockStyle.Top, Height = 86, ColumnCount = 3 };
         for (int i = 0; i < 3; i++) pnlCards.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 33.33f));
-        var cardTotal = WinStyles.CriarCardMetrica("Total a Produzir", "540 un");
-        var cardFrito = WinStyles.CriarCardMetrica("Fritos", "320 un");
-        var cardAssado = WinStyles.CriarCardMetrica("Assados", "220 un");
-        _lblTotalCard = (Label)cardTotal.Controls[0];
-        _lblFritoCard = (Label)cardFrito.Controls[0];
-        _lblAssadoCard = (Label)cardAssado.Controls[0];
+        var cardTotal = WinStyles.CriarCardMetrica("Total a Produzir", "540 un", null, out _lblTotalCard);
+        var cardFrito = WinStyles.CriarCardMetrica("Fritos", "320 un", null, out _lblFritoCard);
+        var cardAssado = WinStyles.CriarCardMetrica("Assados", "220 un", null, out _lblAssadoCard);
         pnlCards.Controls.Add(cardTotal, 0, 0);
         pnlCards.Controls.Add(cardFrito, 1, 0);
         pnlCards.Controls.Add(cardAssado, 2, 0);
