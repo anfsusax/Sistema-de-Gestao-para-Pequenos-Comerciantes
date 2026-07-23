@@ -5,8 +5,10 @@ using SalgaFacil.Infrastructure.Data;
 
 namespace SalgaFacil.Web.Services;
 
-public class ProdutoService(SalgaFacilDbContext db)
+public class ProdutoService(SalgaFacilDbContext db, IEmpresaContext empresa)
 {
+    private int EmpresaId => empresa.RequireEmpresaId();
+
     public Task<List<Produto>> ListarAsync(
         string? filtroTipo = null,
         bool? apenasAtivos = null,
@@ -15,6 +17,7 @@ public class ProdutoService(SalgaFacilDbContext db)
         db.Produtos
             .Include(p => p.Categoria)
             .Include(p => p.UnidadeMedida)
+            .Where(p => p.EmpresaId == EmpresaId)
             .Where(p => filtroTipo == null
                 || (filtroTipo == "Frito" && p.Tipo == TipoProduto.Frito)
                 || (filtroTipo == "Assado" && p.Tipo == TipoProduto.Assado))
@@ -31,7 +34,7 @@ public class ProdutoService(SalgaFacilDbContext db)
         db.Produtos
             .Include(p => p.Categoria)
             .Include(p => p.UnidadeMedida)
-            .FirstOrDefaultAsync(p => p.Id == id);
+            .FirstOrDefaultAsync(p => p.Id == id && p.EmpresaId == EmpresaId);
 
     public async Task SalvarAsync(Produto produto)
     {
@@ -46,14 +49,18 @@ public class ProdutoService(SalgaFacilDbContext db)
         if (produto.EstoqueAtual < 0 || produto.EstoqueMinimo < 0)
             throw new InvalidOperationException("Estoques não podem ser negativos.");
 
+        var catOk = await db.CategoriasProduto.AnyAsync(c => c.Id == produto.CategoriaId && c.EmpresaId == EmpresaId);
+        if (!catOk) throw new InvalidOperationException("Categoria inválida para esta empresa.");
+
         produto.Nome = produto.Nome.Trim();
         if (!string.IsNullOrWhiteSpace(produto.Codigo))
             produto.Codigo = produto.Codigo.Trim().ToUpperInvariant();
 
         if (produto.Id == 0)
         {
-            var novo = new Produto
+            db.Produtos.Add(new Produto
             {
+                EmpresaId = EmpresaId,
                 Codigo = produto.Codigo,
                 Nome = produto.Nome,
                 Descricao = produto.Descricao,
@@ -68,12 +75,11 @@ public class ProdutoService(SalgaFacilDbContext db)
                 EstoqueMinimo = produto.EstoqueMinimo,
                 Ativo = produto.Ativo,
                 CriadoEm = DateTime.UtcNow
-            };
-            db.Produtos.Add(novo);
+            });
         }
         else
         {
-            var existente = await db.Produtos.FindAsync(produto.Id)
+            var existente = await db.Produtos.FirstOrDefaultAsync(p => p.Id == produto.Id && p.EmpresaId == EmpresaId)
                 ?? throw new InvalidOperationException("Produto não encontrado.");
             existente.Codigo = produto.Codigo;
             existente.Nome = produto.Nome;
@@ -96,7 +102,7 @@ public class ProdutoService(SalgaFacilDbContext db)
 
     public async Task AlternarAtivoAsync(int id)
     {
-        var produto = await db.Produtos.FindAsync(id)
+        var produto = await db.Produtos.FirstOrDefaultAsync(p => p.Id == id && p.EmpresaId == EmpresaId)
             ?? throw new InvalidOperationException("Produto não encontrado.");
         produto.Ativo = !produto.Ativo;
         produto.AtualizadoEm = DateTime.UtcNow;
@@ -105,7 +111,7 @@ public class ProdutoService(SalgaFacilDbContext db)
 
     public async Task ExcluirAsync(int id)
     {
-        var produto = await db.Produtos.FindAsync(id);
+        var produto = await db.Produtos.FirstOrDefaultAsync(p => p.Id == id && p.EmpresaId == EmpresaId);
         if (produto is null) return;
 
         var emVenda = await db.VendaItens.AnyAsync(i => i.ProdutoId == id);

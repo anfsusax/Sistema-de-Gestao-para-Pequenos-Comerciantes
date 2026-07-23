@@ -1,9 +1,9 @@
 @page "/produtos/novo"
 @page "/produtos/editar/{Id:int}"
-@rendermode InteractiveServer
 @inject ProdutoService Produtos
 @inject CategoriaService Categorias
 @inject UnidadeMedidaService Unidades
+@inject ProdutoImagemService Imagens
 @inject NavigationManager Nav
 
 <PageTitle>@(_editando ? "Editar" : "Novo") Produto — SalgadosPro</PageTitle>
@@ -89,10 +89,32 @@
                 <InputNumber class="form-control" @bind-Value="_produto.EstoqueMinimo" />
             </div>
         </div>
+
         <div class="form-group">
-            <label>Imagem (URL)</label>
-            <InputText class="form-control" @bind-Value="_produto.FotoUrl" placeholder="https://..." maxlength="500" />
+            <label>Imagem do produto</label>
+            <p class="subtitle" style="margin:0 0 10px">Usada no cardápio. JPG, PNG, WEBP ou GIF · máx. 5 MB</p>
+            <div class="produto-imagem-box">
+                @if (!string.IsNullOrWhiteSpace(_previewUrl))
+                {
+                    <img src="@_previewUrl" alt="Prévia do produto" class="produto-imagem-preview" />
+                }
+                else
+                {
+                    <div class="produto-imagem-placeholder">Sem imagem</div>
+                }
+                <div class="produto-imagem-actions">
+                    <label class="btn btn-secondary" style="cursor:pointer;margin:0">
+                        @(_imagemBytes != null || (!string.IsNullOrWhiteSpace(_produto.FotoUrl) && !_removerImagemAtual) ? "Trocar imagem" : "Selecionar imagem")
+                        <InputFile OnChange="OnImagemSelecionada" accept=".jpg,.jpeg,.png,.webp,.gif,image/*" style="display:none" />
+                    </label>
+                    @if (!string.IsNullOrWhiteSpace(_previewUrl))
+                    {
+                        <button type="button" class="btn btn-secondary" @onclick="RemoverImagem">Remover</button>
+                    }
+                </div>
+            </div>
         </div>
+
         <div class="form-group">
             <label><InputCheckbox @bind-Value="_produto.Ativo" /> Produto ativo</label>
         </div>
@@ -111,6 +133,10 @@
     private bool _editando;
     private bool _salvando;
     private string? _erro;
+    private byte[]? _imagemBytes;
+    private string? _imagemNome;
+    private string? _previewUrl;
+    private bool _removerImagemAtual;
 
     protected override async Task OnInitializedAsync()
     {
@@ -124,6 +150,7 @@
             if (p != null)
             {
                 _produto = p;
+                _previewUrl = p.FotoUrl;
                 if (_categorias.All(c => c.Id != p.CategoriaId) && p.Categoria != null)
                     _categorias.Add(p.Categoria);
                 if (_unidades.All(u => u.Id != p.UnidadeMedidaId) && p.UnidadeMedida != null)
@@ -137,13 +164,59 @@
         }
     }
 
+    private async Task OnImagemSelecionada(InputFileChangeEventArgs e)
+    {
+        _erro = null;
+        try
+        {
+            var arquivo = e.File;
+            if (arquivo.Size > ProdutoImagemService.TamanhoMaximoBytes)
+                throw new InvalidOperationException("A imagem deve ter no máximo 5 MB.");
+
+            await using var stream = arquivo.OpenReadStream(ProdutoImagemService.TamanhoMaximoBytes);
+            using var ms = new MemoryStream();
+            await stream.CopyToAsync(ms);
+            _imagemBytes = ms.ToArray();
+            _imagemNome = arquivo.Name;
+            _removerImagemAtual = false;
+
+            var contentType = string.IsNullOrWhiteSpace(arquivo.ContentType) ? "image/jpeg" : arquivo.ContentType;
+            _previewUrl = $"data:{contentType};base64,{Convert.ToBase64String(_imagemBytes)}";
+        }
+        catch (Exception ex)
+        {
+            _imagemBytes = null;
+            _imagemNome = null;
+            _erro = ex.Message;
+        }
+    }
+
+    private void RemoverImagem()
+    {
+        _imagemBytes = null;
+        _imagemNome = null;
+        _removerImagemAtual = true;
+        _previewUrl = null;
+    }
+
     private async Task Salvar()
     {
         _salvando = true;
         _erro = null;
         try
         {
-            // Evita tracking de navegações no Update
+            var fotoAnterior = _produto.FotoUrl;
+
+            if (_imagemBytes != null && !string.IsNullOrWhiteSpace(_imagemNome))
+            {
+                _produto.FotoUrl = await Imagens.SalvarAsync(_imagemBytes, _imagemNome, fotoAnterior);
+            }
+            else if (_removerImagemAtual)
+            {
+                Imagens.RemoverArquivoLocal(fotoAnterior);
+                _produto.FotoUrl = null;
+            }
+
             await Produtos.SalvarAsync(_produto);
             Nav.NavigateTo("/produtos");
         }

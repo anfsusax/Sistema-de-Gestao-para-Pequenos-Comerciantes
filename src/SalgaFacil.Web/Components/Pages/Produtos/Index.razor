@@ -1,5 +1,4 @@
 @page "/produtos"
-@rendermode InteractiveServer
 @inject ProdutoService Produtos
 @inject CategoriaService Categorias
 @inject NavigationManager Nav
@@ -67,7 +66,19 @@
                 {
                     <tr>
                         <td>@(p.Codigo ?? "—")</td>
-                        <td><strong>@p.Nome</strong></td>
+                        <td>
+                            <div class="row-user">
+                                @if (!string.IsNullOrWhiteSpace(p.FotoUrl))
+                                {
+                                    <img src="@p.FotoUrl" alt="@p.Nome" class="produto-thumb" />
+                                }
+                                else
+                                {
+                                    <div class="produto-thumb produto-thumb--empty">🥟</div>
+                                }
+                                <strong>@p.Nome</strong>
+                            </div>
+                        </td>
                         <td>@(p.Categoria?.Nome ?? "—")</td>
                         <td>@(p.UnidadeMedida?.Sigla ?? "—")</td>
                         <td class="valor">@p.PrecoVenda.ToString("C", _ptBr)</td>

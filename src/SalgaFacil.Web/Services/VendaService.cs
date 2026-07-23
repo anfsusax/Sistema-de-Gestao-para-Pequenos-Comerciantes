@@ -5,21 +5,24 @@ using SalgaFacil.Infrastructure.Data;
 
 namespace SalgaFacil.Web.Services;
 
-public class VendaService(SalgaFacilDbContext db)
+public class VendaService(SalgaFacilDbContext db, IEmpresaContext empresa)
 {
+    private int EmpresaId => empresa.RequireEmpresaId();
+
     public Task<List<Produto>> BuscarProdutosAsync(string termo) =>
         db.Produtos
-            .Where(p => p.Ativo)
+            .Where(p => p.EmpresaId == EmpresaId && p.Ativo)
             .Where(p => p.Nome.Contains(termo) || (p.CodigoBarras != null && p.CodigoBarras == termo))
             .OrderBy(p => p.Nome)
             .Take(20)
             .ToListAsync();
 
     public Task<Produto?> BuscarPorCodigoBarrasAsync(string codigo) =>
-        db.Produtos.FirstOrDefaultAsync(p => p.Ativo && p.CodigoBarras == codigo);
+        db.Produtos.FirstOrDefaultAsync(p => p.EmpresaId == EmpresaId && p.Ativo && p.CodigoBarras == codigo);
 
     public Task<List<Cliente>> BuscarClientesAsync(string termo) =>
         db.Clientes
+            .Where(c => c.EmpresaId == EmpresaId)
             .Where(c => c.Nome.Contains(termo) || (c.Cpf != null && c.Cpf.Contains(termo)))
             .OrderBy(c => c.Nome)
             .Take(20)
@@ -30,7 +33,7 @@ public class VendaService(SalgaFacilDbContext db)
             .Include(v => v.Cliente)
             .Include(v => v.Usuario)
             .Include(v => v.Itens).ThenInclude(i => i.Produto)
-            .FirstOrDefaultAsync(v => v.Id == id);
+            .FirstOrDefaultAsync(v => v.Id == id && v.EmpresaId == EmpresaId);
 
     /// <remarks>
     /// BUG EVITADO: comparar "v.Data.Date == data.Value.Date" direto compararia o dia em UTC
@@ -47,6 +50,7 @@ public class VendaService(SalgaFacilDbContext db)
         return db.Vendas
             .Include(v => v.Cliente)
             .Include(v => v.Itens)
+            .Where(v => v.EmpresaId == EmpresaId)
             .Where(v => !inicioUtc.HasValue || (v.Data >= inicioUtc.Value && v.Data < fimUtc!.Value))
             .Where(v => !sessaoCaixaId.HasValue || v.SessaoCaixaId == sessaoCaixaId.Value)
             .OrderByDescending(v => v.Data)
@@ -65,7 +69,7 @@ public class VendaService(SalgaFacilDbContext db)
         if (dados.Itens.Count == 0)
             throw new InvalidOperationException("Venda precisa ter ao menos um item.");
 
-        var sessao = await db.SessoesCaixa.FindAsync(dados.SessaoCaixaId);
+        var sessao = await db.SessoesCaixa.FirstOrDefaultAsync(s => s.Id == dados.SessaoCaixaId && s.EmpresaId == EmpresaId);
         if (sessao == null || sessao.Status != StatusSessaoCaixa.Aberta)
             throw new InvalidOperationException("Não há uma sessão de caixa aberta. Abra o caixa antes de vender.");
 
@@ -80,7 +84,7 @@ public class VendaService(SalgaFacilDbContext db)
             throw new InvalidOperationException("Valor recebido é menor que o total da venda.");
 
         var produtoIds = dados.Itens.Select(i => i.ProdutoId).Distinct().ToList();
-        var produtos = await db.Produtos.Where(p => produtoIds.Contains(p.Id)).ToDictionaryAsync(p => p.Id);
+        var produtos = await db.Produtos.Where(p => p.EmpresaId == EmpresaId && produtoIds.Contains(p.Id)).ToDictionaryAsync(p => p.Id);
         var estoqueNecessario = new Dictionary<int, int>();
         foreach (var item in dados.Itens)
         {
@@ -93,6 +97,7 @@ public class VendaService(SalgaFacilDbContext db)
 
         var venda = new Venda
         {
+            EmpresaId = EmpresaId,
             ClienteId = dados.ClienteId,
             UsuarioId = dados.UsuarioId,
             SessaoCaixaId = dados.SessaoCaixaId,
@@ -131,11 +136,11 @@ public class VendaService(SalgaFacilDbContext db)
     /// </remarks>
     public async Task CancelarAsync(int id)
     {
-        var venda = await db.Vendas.Include(v => v.Itens).FirstOrDefaultAsync(v => v.Id == id);
+        var venda = await db.Vendas.Include(v => v.Itens).FirstOrDefaultAsync(v => v.Id == id && v.EmpresaId == EmpresaId);
         if (venda == null || venda.Status == StatusVenda.Cancelada) return;
 
         var produtoIds = venda.Itens.Select(i => i.ProdutoId).Distinct().ToList();
-        var produtos = await db.Produtos.Where(p => produtoIds.Contains(p.Id)).ToDictionaryAsync(p => p.Id);
+        var produtos = await db.Produtos.Where(p => p.EmpresaId == EmpresaId && produtoIds.Contains(p.Id)).ToDictionaryAsync(p => p.Id);
         foreach (var item in venda.Itens)
             if (produtos.TryGetValue(item.ProdutoId, out var produto))
                 produto.EstoqueAtual += item.Quantidade;

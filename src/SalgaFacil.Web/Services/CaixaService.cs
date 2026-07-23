@@ -9,23 +9,26 @@ namespace SalgaFacil.Web.Services;
 /// Modelo assume 1 sessão de caixa aberta por vez no sistema inteiro (não por usuário/terminal) —
 /// adequado para um único ponto de venda físico. Ver _ia/DECISOES.md.
 /// </remarks>
-public class CaixaService(SalgaFacilDbContext db)
+public class CaixaService(SalgaFacilDbContext db, IEmpresaContext empresa)
 {
+    private int EmpresaId => empresa.RequireEmpresaId();
+
     public Task<SessaoCaixa?> ObterSessaoAbertaAsync() =>
         db.SessoesCaixa
             .Include(s => s.UsuarioAbertura)
-            .FirstOrDefaultAsync(s => s.Status == StatusSessaoCaixa.Aberta);
+            .FirstOrDefaultAsync(s => s.EmpresaId == EmpresaId && s.Status == StatusSessaoCaixa.Aberta);
 
     public Task<SessaoCaixa?> ObterAsync(int id) =>
         db.SessoesCaixa
             .Include(s => s.UsuarioAbertura)
             .Include(s => s.UsuarioFechamento)
             .Include(s => s.Movimentos)
-            .FirstOrDefaultAsync(s => s.Id == id);
+            .FirstOrDefaultAsync(s => s.Id == id && s.EmpresaId == EmpresaId);
 
     public Task<List<SessaoCaixa>> ListarAsync() =>
         db.SessoesCaixa
             .Include(s => s.UsuarioAbertura)
+            .Where(s => s.EmpresaId == EmpresaId)
             .OrderByDescending(s => s.DataAbertura)
             .ToListAsync();
 
@@ -36,7 +39,12 @@ public class CaixaService(SalgaFacilDbContext db)
         if (valorAbertura < 0)
             throw new InvalidOperationException("Valor de abertura não pode ser negativo.");
 
-        var sessao = new SessaoCaixa { UsuarioAberturaId = usuarioId, ValorAbertura = valorAbertura };
+        var sessao = new SessaoCaixa
+        {
+            EmpresaId = EmpresaId,
+            UsuarioAberturaId = usuarioId,
+            ValorAbertura = valorAbertura
+        };
         db.SessoesCaixa.Add(sessao);
         await db.SaveChangesAsync();
         return sessao.Id;
@@ -47,7 +55,7 @@ public class CaixaService(SalgaFacilDbContext db)
         if (valor <= 0)
             throw new InvalidOperationException("Valor do movimento deve ser maior que zero.");
 
-        var sessao = await db.SessoesCaixa.FindAsync(sessaoId);
+        var sessao = await db.SessoesCaixa.FirstOrDefaultAsync(s => s.Id == sessaoId && s.EmpresaId == EmpresaId);
         if (sessao == null || sessao.Status != StatusSessaoCaixa.Aberta)
             throw new InvalidOperationException("Sessão de caixa não está aberta.");
 
@@ -64,14 +72,14 @@ public class CaixaService(SalgaFacilDbContext db)
 
     public async Task<ResumoSessaoCaixa> ObterResumoAsync(int sessaoId)
     {
-        var sessao = await db.SessoesCaixa.FindAsync(sessaoId)
+        var sessao = await db.SessoesCaixa.FirstOrDefaultAsync(s => s.Id == sessaoId && s.EmpresaId == EmpresaId)
             ?? throw new InvalidOperationException("Sessão de caixa não encontrada.");
 
         var vendasDinheiro = await db.Vendas
-            .Where(v => v.SessaoCaixaId == sessaoId && v.Status == StatusVenda.Finalizada && v.FormaPagamento == FormaPagamento.Dinheiro)
+            .Where(v => v.EmpresaId == EmpresaId && v.SessaoCaixaId == sessaoId && v.Status == StatusVenda.Finalizada && v.FormaPagamento == FormaPagamento.Dinheiro)
             .SumAsync(v => (decimal?)v.Total) ?? 0m;
         var vendasOutras = await db.Vendas
-            .Where(v => v.SessaoCaixaId == sessaoId && v.Status == StatusVenda.Finalizada && v.FormaPagamento != FormaPagamento.Dinheiro)
+            .Where(v => v.EmpresaId == EmpresaId && v.SessaoCaixaId == sessaoId && v.Status == StatusVenda.Finalizada && v.FormaPagamento != FormaPagamento.Dinheiro)
             .SumAsync(v => (decimal?)v.Total) ?? 0m;
         var sangrias = await db.MovimentosCaixa
             .Where(m => m.SessaoCaixaId == sessaoId && m.Tipo == TipoMovimentoCaixa.Sangria)
@@ -93,7 +101,7 @@ public class CaixaService(SalgaFacilDbContext db)
 
     public async Task FecharAsync(int sessaoId, decimal valorContado, int usuarioId)
     {
-        var sessao = await db.SessoesCaixa.FindAsync(sessaoId)
+        var sessao = await db.SessoesCaixa.FirstOrDefaultAsync(s => s.Id == sessaoId && s.EmpresaId == EmpresaId)
             ?? throw new InvalidOperationException("Sessão de caixa não encontrada.");
         if (sessao.Status != StatusSessaoCaixa.Aberta)
             throw new InvalidOperationException("Sessão de caixa já está fechada.");

@@ -1,23 +1,44 @@
 @page "/configuracoes"
-@rendermode InteractiveServer
 @inject EmpresaService Empresa
 @inject AuthService Auth
 @inject NavigationManager Nav
 
-<PageTitle>Configurações — SalgadosPro</PageTitle>
+<PageTitle>Configurações — ConsuCruz</PageTitle>
 
 <div class="page-header">
     <div><h1>Configurações</h1><p class="subtitle">Dados da empresa e conta</p></div>
 </div>
 
+@if (!string.IsNullOrEmpty(_msg))
+{
+    <div class="card" style="margin-bottom:16px;padding:12px 16px;border-left:4px solid var(--terracota)">@_msg</div>
+}
+
 @if (_empresa != null)
 {
-    <div class="card form-card">
-        <div class="card-title">Empresa</div>
+    <div class="card form-card" style="max-width:720px">
+        <div class="card-title">Empresa (loja pública)</div>
         <EditForm Model="_empresa" OnValidSubmit="SalvarEmpresa">
             <div class="form-group">
-                <label>Nome da Empresa</label>
+                <label>Razão social</label>
+                <InputText class="form-control" @bind-Value="_empresa.RazaoSocial" placeholder="ConsuCruz LTDA" />
+            </div>
+            <div class="form-group">
+                <label>Nome</label>
                 <InputText class="form-control" @bind-Value="_empresa.Nome" />
+            </div>
+            <div class="form-group">
+                <label>Nome fantasia</label>
+                <InputText class="form-control" @bind-Value="_empresa.NomeFantasia" />
+            </div>
+            <div class="form-group">
+                <label>Slug da loja *</label>
+                <InputText class="form-control" @bind-Value="_empresa.Slug" placeholder="consucruz" />
+                <p class="subtitle" style="margin-top:6px">Cardápio público: /loja/@(_empresa.Slug)</p>
+            </div>
+            <div class="form-group">
+                <label>Descrição</label>
+                <InputTextArea class="form-control" @bind-Value="_empresa.Descricao" rows="2" />
             </div>
             <div class="form-row">
                 <div class="form-group">
@@ -25,22 +46,44 @@
                     <InputText class="form-control" @bind-Value="_empresa.Telefone" />
                 </div>
                 <div class="form-group">
+                    <label>WhatsApp</label>
+                    <InputText class="form-control" @bind-Value="_empresa.WhatsApp" />
+                </div>
+            </div>
+            <div class="form-row">
+                <div class="form-group">
                     <label>Email</label>
                     <InputText class="form-control" @bind-Value="_empresa.Email" />
+                </div>
+                <div class="form-group">
+                    <label>Horário</label>
+                    <InputText class="form-control" @bind-Value="_empresa.HorarioFuncionamento" />
                 </div>
             </div>
             <div class="form-group">
                 <label>Endereço</label>
                 <InputText class="form-control" @bind-Value="_empresa.Endereco" />
             </div>
+            <div class="form-row">
+                <div class="form-group">
+                    <label>Instagram</label>
+                    <InputText class="form-control" @bind-Value="_empresa.Instagram" />
+                </div>
+                <div class="form-group">
+                    <label>Facebook</label>
+                    <InputText class="form-control" @bind-Value="_empresa.Facebook" />
+                </div>
+            </div>
             <button type="submit" class="btn btn-primary">Salvar</button>
+            <a class="btn btn-secondary" href="/loja/@_empresa.Slug" style="margin-left:8px" target="_blank">Ver loja pública</a>
         </EditForm>
     </div>
 
-    <div class="card form-card" style="margin-top:16px">
+    <div class="card form-card" style="margin-top:16px;max-width:720px">
         <div class="card-title">Conta</div>
         <p style="font-size:14px;margin-bottom:16px">
-            Logado como <strong>@Auth.UsuarioAtual?.Nome</strong> (@Auth.UsuarioAtual?.Email)
+            Logado como <strong>@Auth.UsuarioAtual?.Nome</strong> (@Auth.UsuarioAtual?.Email)<br />
+            Empresa: <strong>@Auth.UsuarioAtual?.EmpresaNome</strong>
         </p>
         <button class="btn btn-secondary" @onclick="Sair">Sair da conta</button>
     </div>
@@ -48,17 +91,33 @@
 
 @code {
     private Empresa? _empresa;
+    private string? _msg;
 
-    protected override async Task OnInitializedAsync() => _empresa = await Empresa.ObterAsync() ?? new Empresa();
+    protected override async Task OnInitializedAsync()
+    {
+        if (!Auth.EstaAutenticado) return;
+        _empresa = await Empresa.ObterAsync();
+    }
 
     private async Task SalvarEmpresa()
     {
-        if (_empresa != null) await Empresa.SalvarAsync(_empresa);
+        try
+        {
+            if (_empresa != null)
+            {
+                await Empresa.SalvarAsync(_empresa);
+                await Auth.AtualizarSessaoEmpresaAsync(
+                    _empresa.NomeFantasia ?? _empresa.Nome,
+                    _empresa.Slug);
+                _msg = "Empresa atualizada.";
+            }
+        }
+        catch (Exception ex) { _msg = ex.Message; }
     }
 
-    private void Sair()
+    private async Task Sair()
     {
-        Auth.Logout();
+        await Auth.LogoutAsync();
         Nav.NavigateTo("/login");
     }
 }

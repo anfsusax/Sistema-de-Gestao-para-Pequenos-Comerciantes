@@ -2,18 +2,19 @@
 @inject AuthService Auth
 @inject NavigationManager Nav
 
+@* Sem "Carregando sessão" / ProtectedSessionStorage aqui — isso travava o circuito. *@
 @if (IsPublicPage)
 {
     @Body
 }
-else
+else if (Auth.EstaAutenticado)
 {
     <div class="app-shell">
         <aside class="sidebar">
             <div class="sidebar-brand">
                 <div class="brand-icon">🥟</div>
                 <div class="brand-text">
-                    <strong>SalgadosPro</strong>
+                    <strong>@(Auth.UsuarioAtual?.EmpresaNome ?? "ConsuCruz")</strong>
                     <span>Gestão Comercial</span>
                 </div>
             </div>
@@ -63,7 +64,7 @@ else
             </ul>
             <div class="sidebar-footer">
                 <NavLink class="nav-link" href="/configuracoes" ActiveClass="active">
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 010 2.83 2 2 0 01-2.83 0l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 01-4 0v-.09A1.65 1.65 0 009 19.4a1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 01-2.83 0 2 2 0 010-2.83l.06-.06A1.65 1.65 0 004.68 15a1.65 1.65 0 00-1.51-1H3a2 2 0 010-4h.09A1.65 1.65 0 004.6 9a1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 012.83-2.83l.06.06A1.65 1.65 0 009 4.68a1.65 1.65 0 001-1.51V3a2 2 0 014 0v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 012.83 2.83l-.06.06A1.65 1.65 0 0019.4 9a1.65 1.65 0 001.51 1H21a2 2 0 010 4h-.09a1.65 1.65 0 00-1.51 1z"/></svg>
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 010 2.83 2 2 0 01-2.83 0l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 01-4 0v-.09A1.65 1.65 0 009 19.4a1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 01-2.83 0 2 2 0 010-2.83l.06-.06A1.65 1.65 0 004.68 15a1.65 1.65 0 00-1.51-1H3a2 2 0 010-4h.09A1.65 1.65 0 004.6 9a1.65 1.65 0 00-.33-1.82l-.06-.06A1.65 1.65 0 009 4.68a1.65 1.65 0 001-1.51V3a2 2 0 014 0v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 012.83 2.83l-.06.06A1.65 1.65 0 0019.4 9a1.65 1.65 0 001.51 1H21a2 2 0 010 4h-.09a1.65 1.65 0 00-1.51 1z"/></svg>
                     Configurações
                 </NavLink>
             </div>
@@ -73,7 +74,7 @@ else
                 <div class="top-bar-actions">
                     <div class="notif-btn">🔔</div>
                     <div class="user-menu">
-                        <span style="font-size:13px;color:var(--text-muted)">Olá, @(Auth.UsuarioAtual?.Nome.Split(' ').FirstOrDefault())</span>
+                        <span style="font-size:13px;color:var(--text-muted)">@(Auth.UsuarioAtual?.EmpresaNome) · Olá, @(Auth.UsuarioAtual?.Nome.Split(' ').FirstOrDefault())</span>
                         <div class="user-avatar">@(Auth.UsuarioAtual?.Iniciais)</div>
                     </div>
                 </div>
@@ -84,18 +85,39 @@ else
         </div>
     </div>
 }
+else
+{
+    <div class="login-page">
+        <p style="color:#fff;margin:0 0 12px">Redirecionando para o login...</p>
+        <a href="/login" style="color:#fff;text-decoration:underline">Clique aqui se não redirecionar</a>
+    </div>
+}
 
 <div id="blazor-error-ui" data-nosnippet>
     Erro inesperado. <a href="." class="reload">Recarregar</a>
 </div>
 
 @code {
-    private bool IsPublicPage =>
-        Nav.Uri.Contains("/login", StringComparison.OrdinalIgnoreCase);
+    private bool _redirectStarted;
+
+    private bool IsPublicPage
+    {
+        get
+        {
+            var path = new Uri(Nav.Uri).AbsolutePath;
+            return path.Equals("/login", StringComparison.OrdinalIgnoreCase)
+                || path.Equals("/", StringComparison.OrdinalIgnoreCase)
+                || path.StartsWith("/loja/", StringComparison.OrdinalIgnoreCase);
+        }
+    }
 
     protected override void OnAfterRender(bool firstRender)
     {
-        if (firstRender && !Auth.EstaAutenticado && !IsPublicPage)
-            Nav.NavigateTo("/login");
+        if (!firstRender || IsPublicPage || Auth.EstaAutenticado || _redirectStarted)
+            return;
+
+        _redirectStarted = true;
+        // Sem forceLoad: mantém o mesmo circuito Blazor (Auth scoped).
+        Nav.NavigateTo("/login");
     }
 }

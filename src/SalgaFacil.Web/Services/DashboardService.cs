@@ -4,15 +4,20 @@ using SalgaFacil.Infrastructure.Data;
 
 namespace SalgaFacil.Web.Services;
 
-public class DashboardService(SalgaFacilDbContext db)
+public class DashboardService(SalgaFacilDbContext db, IEmpresaContext empresa)
 {
     public async Task<DashboardDto> ObterAsync()
     {
+        var empresaId = empresa.RequireEmpresaId();
         var hoje = DateTime.UtcNow.Date;
         var inicioSemana = hoje.AddDays(-(int)hoje.DayOfWeek + (int)DayOfWeek.Monday);
         if (hoje.DayOfWeek == DayOfWeek.Sunday) inicioSemana = hoje.AddDays(-6);
 
-        var pedidos = await db.Pedidos.Include(p => p.Cliente).Include(p => p.Itens).ThenInclude(i => i.Produto).ToListAsync();
+        var pedidos = await db.Pedidos
+            .Include(p => p.Cliente)
+            .Include(p => p.Itens).ThenInclude(i => i.Produto)
+            .Where(p => p.EmpresaId == empresaId)
+            .ToListAsync();
         var pedidosHoje = pedidos.Where(p => p.Data.Date == hoje).ToList();
         var pedidosAtivos = pedidos.Where(p => p.Status is StatusPedido.Aguardando or StatusPedido.EmProducao or StatusPedido.Pronto).ToList();
 

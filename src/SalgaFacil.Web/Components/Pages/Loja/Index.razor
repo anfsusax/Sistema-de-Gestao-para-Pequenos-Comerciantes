@@ -1,0 +1,138 @@
+@page "/loja/{Slug}"
+@layout SalgaFacil.Web.Components.Layout.PublicLayout
+@inject LojaPublicaService Loja
+@inject CarrinhoSessao Carrinho
+
+<PageTitle>@(_empresa?.NomeFantasia ?? _empresa?.Nome ?? "Cardápio")</PageTitle>
+
+@if (_carregando)
+{
+    <p class="loja-loading">Carregando cardápio...</p>
+}
+else if (_empresa is null)
+{
+    <div class="loja-empty">
+        <h1>Loja não encontrada</h1>
+        <p>Verifique o link ou volte à página inicial.</p>
+        <a href="/" class="btn btn-primary">Voltar</a>
+    </div>
+}
+else
+{
+    <header class="loja-header">
+        <div class="loja-header-inner">
+            <div>
+                <p class="loja-eyebrow">Cardápio</p>
+                <h1>@(_empresa.NomeFantasia ?? _empresa.Nome)</h1>
+                @if (!string.IsNullOrWhiteSpace(_empresa.Descricao))
+                {
+                    <p class="loja-desc">@_empresa.Descricao</p>
+                }
+            </div>
+            <div class="loja-header-actions">
+                <a class="btn btn-secondary" href="/loja/@Slug/carrinho">Carrinho (@Carrinho.QuantidadeTotal(Slug))</a>
+                <a class="loja-admin-link" href="/login">Acesso do Comerciante</a>
+            </div>
+        </div>
+        <div class="loja-meta">
+            @if (!string.IsNullOrWhiteSpace(_empresa.HorarioFuncionamento))
+            {
+                <span>🕒 @_empresa.HorarioFuncionamento</span>
+            }
+            @if (!string.IsNullOrWhiteSpace(_empresa.Endereco))
+            {
+                <span>📍 @_empresa.Endereco</span>
+            }
+            @if (!string.IsNullOrWhiteSpace(_empresa.WhatsApp))
+            {
+                <span>📱 @_empresa.WhatsApp</span>
+            }
+        </div>
+    </header>
+
+    <div class="loja-filters">
+        <button class="chip @(_categoriaId == null ? "active" : "")" @onclick="() => Filtrar(null)">Todos</button>
+        @foreach (var c in _categorias)
+        {
+            <button class="chip @(_categoriaId == c.Id ? "active" : "")" @onclick="() => Filtrar(c.Id)">@c.Nome</button>
+        }
+    </div>
+
+    @if (_produtos.Count == 0)
+    {
+        <p class="loja-empty-msg">Nenhum produto disponível no momento. Cadastre produtos no painel administrativo.</p>
+    }
+    else
+    {
+        <div class="loja-grid">
+            @foreach (var p in _produtos)
+            {
+                <article class="loja-card">
+                    @if (!string.IsNullOrWhiteSpace(p.FotoUrl))
+                    {
+                        <img src="@p.FotoUrl" alt="@p.Nome" class="loja-card-img" />
+                    }
+                    else
+                    {
+                        <div class="loja-card-img loja-card-img--empty">🥟</div>
+                    }
+                    <div class="loja-card-body">
+                        <span class="loja-card-cat">@(p.Categoria?.Nome)</span>
+                        <h2>@p.Nome</h2>
+                        @if (!string.IsNullOrWhiteSpace(p.Descricao))
+                        {
+                            <p>@p.Descricao</p>
+                        }
+                        <div class="loja-card-footer">
+                            <strong>@p.PrecoVenda.ToString("C", _ptBr)</strong>
+                            <button class="btn btn-primary" type="button" @onclick="() => Adicionar(p)">Adicionar</button>
+                        </div>
+                    </div>
+                </article>
+            }
+        </div>
+    }
+
+    @if (!string.IsNullOrEmpty(_msg))
+    {
+        <div class="loja-toast">@_msg</div>
+    }
+}
+
+@code {
+    [Parameter] public string Slug { get; set; } = "";
+    private Empresa? _empresa;
+    private List<CategoriaProduto> _categorias = [];
+    private List<Produto> _produtos = [];
+    private int? _categoriaId;
+    private bool _carregando = true;
+    private string? _msg;
+    private readonly System.Globalization.CultureInfo _ptBr = new("pt-BR");
+
+    protected override async Task OnInitializedAsync()
+    {
+        _empresa = await Loja.ObterEmpresaPorSlugAsync(Slug);
+        if (_empresa == null) { _carregando = false; return; }
+
+        _categorias = await Loja.ListarCategoriasAsync(_empresa.Id);
+        await Filtrar(null);
+        _carregando = false;
+    }
+
+    private async Task Filtrar(int? categoriaId)
+    {
+        _categoriaId = categoriaId;
+        if (_empresa != null)
+            _produtos = await Loja.ListarProdutosAsync(_empresa.Id, categoriaId);
+    }
+
+    private void Adicionar(Produto p)
+    {
+        var itens = Carrinho.Obter(Slug);
+        var item = itens.FirstOrDefault(c => c.ProdutoId == p.Id);
+        if (item == null) itens.Add(new ItemCarrinhoDto { ProdutoId = p.Id, Quantidade = 1 });
+        else item.Quantidade++;
+        Carrinho.Definir(Slug, itens);
+        _msg = $"{p.Nome} adicionado ao carrinho.";
+    }
+}

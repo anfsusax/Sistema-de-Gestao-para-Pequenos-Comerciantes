@@ -1,17 +1,16 @@
 @page "/login"
-@rendermode InteractiveServer
 @inject AuthService Auth
 @inject NavigationManager Nav
 @layout SalgaFacil.Web.Components.Layout.EmptyLayout
 
-<PageTitle>Login — SalgadosPro</PageTitle>
+<PageTitle>Login — ConsuCruz</PageTitle>
 
 <div class="login-page">
     <div class="login-card">
         <div class="login-brand">
             <div class="brand-icon">🥟</div>
-            <h1>SalgadosPro</h1>
-            <p>Gestão Comercial</p>
+            <h1>Acesso do Comerciante</h1>
+            <p>Painel ConsuCruz</p>
         </div>
         @if (!string.IsNullOrEmpty(_erro))
         {
@@ -24,9 +23,11 @@
             </div>
             <div class="form-group">
                 <label>Senha</label>
-                <InputText type="password" class="form-control" @bind-Value="_model.Senha" placeholder="••••••" />
+                <InputText type="password" class="form-control" @bind-Value="_model.Senha" placeholder="••••••••" />
             </div>
-            <button type="submit" class="btn btn-primary" style="width:100%;justify-content:center;margin-top:8px">Entrar</button>
+            <button type="submit" class="btn btn-primary" style="width:100%;justify-content:center;margin-top:8px" disabled="@_entrando">
+                @(_entrando ? "Entrando..." : "Entrar")
+            </button>
         </EditForm>
         <p style="text-align:center;margin-top:16px;font-size:12px;color:var(--text-muted)">
             Demo: maria@salgadospro.com / 123456
@@ -35,16 +36,33 @@
 </div>
 
 @code {
-    private LoginModel _model = new();
+    private LoginModel _model = new()
+    {
+        Email = "maria@salgadospro.com",
+        Senha = "123456"
+    };
     private string? _erro;
+    private bool _entrando;
 
     private async Task Entrar()
     {
         _erro = null;
-        if (await Auth.LoginAsync(_model.Email, _model.Senha))
-            Nav.NavigateTo("/dashboard");
-        else
-            _erro = "Email ou senha incorretos.";
+        _entrando = true;
+        try
+        {
+            if (await Auth.LoginAsync(_model.Email, _model.Senha))
+                Nav.NavigateTo("/dashboard");
+            else
+                _erro = "Email ou senha incorretos, ou usuário sem empresa vinculada.";
+        }
+        catch (Exception ex)
+        {
+            _erro = ex.Message;
+        }
+        finally
+        {
+            _entrando = false;
+        }
     }
 
     private class LoginModel

@@ -5,13 +5,16 @@ using SalgaFacil.Infrastructure.Data;
 
 namespace SalgaFacil.Web.Services;
 
-public class PedidoService(SalgaFacilDbContext db)
+public class PedidoService(SalgaFacilDbContext db, IEmpresaContext empresa)
 {
+    private int EmpresaId => empresa.RequireEmpresaId();
+
     public Task<List<Pedido>> ListarAsync(StatusPedido? status = null, string? busca = null) =>
         db.Pedidos
             .Include(p => p.Cliente)
             .Include(p => p.Itens).ThenInclude(i => i.Produto)
             .Include(p => p.Itens).ThenInclude(i => i.Pacote)
+            .Where(p => p.EmpresaId == EmpresaId)
             .Where(p => !status.HasValue || p.Status == status.Value)
             .Where(p => busca == null || p.Cliente.Nome.Contains(busca) || p.Id.ToString().Contains(busca))
             .OrderByDescending(p => p.Data)
@@ -22,11 +25,20 @@ public class PedidoService(SalgaFacilDbContext db)
             .Include(p => p.Cliente).ThenInclude(c => c.Enderecos)
             .Include(p => p.Itens).ThenInclude(i => i.Produto)
             .Include(p => p.Itens).ThenInclude(i => i.Pacote)
-            .FirstOrDefaultAsync(p => p.Id == id);
+            .FirstOrDefaultAsync(p => p.Id == id && p.EmpresaId == EmpresaId);
 
     public async Task<int> CriarAsync(int clienteId, List<NovoPedidoItem> itens)
     {
-        var pedido = new Pedido { ClienteId = clienteId, Data = DateTime.UtcNow, Status = StatusPedido.Aguardando };
+        var clienteOk = await db.Clientes.AnyAsync(c => c.Id == clienteId && c.EmpresaId == EmpresaId);
+        if (!clienteOk) throw new InvalidOperationException("Cliente inválido para esta empresa.");
+
+        var pedido = new Pedido
+        {
+            EmpresaId = EmpresaId,
+            ClienteId = clienteId,
+            Data = DateTime.UtcNow,
+            Status = StatusPedido.Aguardando
+        };
         foreach (var item in itens)
         {
             pedido.Itens.Add(new PedidoItem
@@ -45,22 +57,12 @@ public class PedidoService(SalgaFacilDbContext db)
         return pedido.Id;
     }
 
-    /// <remarks>
-    /// Estoque: um Pedido é produzido sob encomenda (não sai de um estoque fixo pré-existente,
-    /// diferente da Venda de balcão), então o efeito no estoque acontece nas transições de
-    /// status, não na criação: "Pronto" significa que o item foi fisicamente produzido (soma ao
-    /// estoque); "Entregue" significa que o item saiu do estabelecimento (subtrai do estoque).
-    /// Isso mantém um único saldo de estoque coerente entre Pedido e Venda — produção (própria
-    /// ou excedente de um pedido) fica disponível para venda de balcão também.
-    /// O efeito só é aplicado uma vez por transição (compara com o status anterior) para não
-    /// duplicar caso o mesmo status seja setado de novo. Ver _ia/DECISOES.md.
-    /// </remarks>
     public async Task AtualizarStatusAsync(int id, StatusPedido novoStatus)
     {
         var pedido = await db.Pedidos
             .Include(p => p.Itens).ThenInclude(i => i.Produto)
             .Include(p => p.Itens).ThenInclude(i => i.Pacote).ThenInclude(pac => pac!.Itens).ThenInclude(pi => pi.Produto)
-            .FirstOrDefaultAsync(p => p.Id == id);
+            .FirstOrDefaultAsync(p => p.Id == id && p.EmpresaId == EmpresaId);
         if (pedido == null) return;
 
         var statusAnterior = pedido.Status;
@@ -79,9 +81,7 @@ public class PedidoService(SalgaFacilDbContext db)
         foreach (var item in pedido.Itens)
         {
             if (item.Produto != null)
-            {
                 item.Produto.EstoqueAtual += sinal * item.Quantidade;
-            }
             else if (item.Pacote?.Itens != null)
             {
                 foreach (var pi in item.Pacote.Itens)
@@ -92,7 +92,8 @@ public class PedidoService(SalgaFacilDbContext db)
 
     public async Task ExcluirAsync(int id)
     {
-        var pedido = await db.Pedidos.Include(p => p.Itens).FirstOrDefaultAsync(p => p.Id == id);
+        var pedido = await db.Pedidos.Include(p => p.Itens)
+            .FirstOrDefaultAsync(p => p.Id == id && p.EmpresaId == EmpresaId);
         if (pedido == null) return;
         db.PedidoItens.RemoveRange(pedido.Itens);
         db.Pedidos.Remove(pedido);
@@ -104,6 +105,7 @@ public class PedidoService(SalgaFacilDbContext db)
         var pedidos = await db.Pedidos
             .Include(p => p.Itens).ThenInclude(i => i.Produto)
             .Include(p => p.Itens).ThenInclude(i => i.Pacote).ThenInclude(p => p!.Itens).ThenInclude(pi => pi.Produto)
+            .Where(p => p.EmpresaId == EmpresaId)
             .Where(p => p.Status == StatusPedido.Aguardando || p.Status == StatusPedido.EmProducao)
             .ToListAsync();
 

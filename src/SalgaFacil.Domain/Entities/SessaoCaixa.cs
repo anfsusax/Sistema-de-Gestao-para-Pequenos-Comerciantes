@@ -11,6 +11,9 @@ namespace SalgaFacil.Domain.Entities;
 public class SessaoCaixa
 {
     public int Id { get; set; }
+    public int EmpresaId { get; set; }
+    public Empresa Empresa { get; set; } = null!;
+
     public int UsuarioAberturaId { get; set; }
     public Usuario UsuarioAbertura { get; set; } = null!;
     public DateTime DataAbertura { get; set; } = DateTime.UtcNow;

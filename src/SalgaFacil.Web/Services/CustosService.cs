@@ -3,15 +3,16 @@ using SalgaFacil.Infrastructure.Data;
 
 namespace SalgaFacil.Web.Services;
 
-public class CustosService(SalgaFacilDbContext db)
+public class CustosService(SalgaFacilDbContext db, IEmpresaContext empresa)
 {
     public async Task<CustosDto> ObterAsync()
     {
+        var empresaId = empresa.RequireEmpresaId();
         var inicioMes = new DateTime(DateTime.UtcNow.Year, DateTime.UtcNow.Month, 1);
         var pedidosMes = await db.Pedidos
             .Include(p => p.Itens).ThenInclude(i => i.Produto)
             .Include(p => p.Itens).ThenInclude(i => i.Pacote).ThenInclude(p => p!.Itens).ThenInclude(pi => pi.Produto)
-            .Where(p => p.Data >= inicioMes)
+            .Where(p => p.EmpresaId == empresaId && p.Data >= inicioMes)
             .ToListAsync();
 
         var receita = pedidosMes.Sum(p => p.Total);
@@ -27,7 +28,7 @@ public class CustosService(SalgaFacilDbContext db)
             }
         }
 
-        var produtos = await db.Produtos.OrderBy(p => p.Nome).ToListAsync();
+        var produtos = await db.Produtos.Where(p => p.EmpresaId == empresaId).OrderBy(p => p.Nome).ToListAsync();
         var margens = produtos.Select(p => new MargemProduto
         {
             Nome = p.Nome,

@@ -22,3 +22,7 @@ obj/
 # OS
 Thumbs.db
 .DS_Store
+
+# Uploads de produtos (cardápio)
+**/wwwroot/uploads/produtos/*
+!**/wwwroot/uploads/produtos/.gitkeep

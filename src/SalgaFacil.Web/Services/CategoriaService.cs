@@ -4,16 +4,19 @@ using SalgaFacil.Infrastructure.Data;
 
 namespace SalgaFacil.Web.Services;
 
-public class CategoriaService(SalgaFacilDbContext db)
+public class CategoriaService(SalgaFacilDbContext db, IEmpresaContext empresa)
 {
+    private int EmpresaId => empresa.RequireEmpresaId();
+
     public Task<List<CategoriaProduto>> ListarAsync(bool? apenasAtivos = null) =>
         db.CategoriasProduto
+            .Where(c => c.EmpresaId == EmpresaId)
             .Where(c => !apenasAtivos.HasValue || c.Ativo == apenasAtivos.Value)
             .OrderBy(c => c.Ordem).ThenBy(c => c.Nome)
             .ToListAsync();
 
     public Task<CategoriaProduto?> ObterAsync(int id) =>
-        db.CategoriasProduto.FirstOrDefaultAsync(c => c.Id == id);
+        db.CategoriasProduto.FirstOrDefaultAsync(c => c.Id == id && c.EmpresaId == EmpresaId);
 
     public async Task SalvarAsync(CategoriaProduto categoria)
     {
@@ -22,7 +25,7 @@ public class CategoriaService(SalgaFacilDbContext db)
 
         categoria.Nome = categoria.Nome.Trim();
         var nomeExiste = await db.CategoriasProduto
-            .AnyAsync(c => c.Nome == categoria.Nome && c.Id != categoria.Id);
+            .AnyAsync(c => c.EmpresaId == EmpresaId && c.Nome == categoria.Nome && c.Id != categoria.Id);
         if (nomeExiste)
             throw new InvalidOperationException("Já existe uma categoria com este nome.");
 
@@ -30,6 +33,7 @@ public class CategoriaService(SalgaFacilDbContext db)
         {
             var nova = new CategoriaProduto
             {
+                EmpresaId = EmpresaId,
                 Nome = categoria.Nome,
                 Descricao = categoria.Descricao,
                 Ordem = categoria.Ordem,
@@ -42,7 +46,7 @@ public class CategoriaService(SalgaFacilDbContext db)
             return;
         }
 
-        var existente = await db.CategoriasProduto.FindAsync(categoria.Id)
+        var existente = await db.CategoriasProduto.FirstOrDefaultAsync(c => c.Id == categoria.Id && c.EmpresaId == EmpresaId)
             ?? throw new InvalidOperationException("Categoria não encontrada.");
         existente.Nome = categoria.Nome;
         existente.Descricao = categoria.Descricao;
@@ -54,7 +58,7 @@ public class CategoriaService(SalgaFacilDbContext db)
 
     public async Task AlternarAtivoAsync(int id)
     {
-        var cat = await db.CategoriasProduto.FindAsync(id)
+        var cat = await db.CategoriasProduto.FirstOrDefaultAsync(c => c.Id == id && c.EmpresaId == EmpresaId)
             ?? throw new InvalidOperationException("Categoria não encontrada.");
         cat.Ativo = !cat.Ativo;
         cat.DataAtualizacao = DateTime.UtcNow;
@@ -63,10 +67,10 @@ public class CategoriaService(SalgaFacilDbContext db)
 
     public async Task ExcluirAsync(int id)
     {
-        var cat = await db.CategoriasProduto.FindAsync(id);
+        var cat = await db.CategoriasProduto.FirstOrDefaultAsync(c => c.Id == id && c.EmpresaId == EmpresaId);
         if (cat is null) return;
 
-        var temProdutos = await db.Produtos.AnyAsync(p => p.CategoriaId == id);
+        var temProdutos = await db.Produtos.AnyAsync(p => p.CategoriaId == id && p.EmpresaId == EmpresaId);
         if (temProdutos)
             throw new InvalidOperationException("Não é possível excluir: existem produtos nesta categoria. Inative-a.");
 

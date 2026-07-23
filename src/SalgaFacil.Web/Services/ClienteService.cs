@@ -4,11 +4,14 @@ using SalgaFacil.Infrastructure.Data;
 
 namespace SalgaFacil.Web.Services;
 
-public class ClienteService(SalgaFacilDbContext db)
+public class ClienteService(SalgaFacilDbContext db, IEmpresaContext empresa)
 {
+    private int EmpresaId => empresa.RequireEmpresaId();
+
     public Task<List<Cliente>> ListarAsync(bool? apenasAtivos = null) =>
         db.Clientes
             .Include(c => c.Enderecos)
+            .Where(c => c.EmpresaId == EmpresaId)
             .Where(c => !apenasAtivos.HasValue || c.Ativo == apenasAtivos.Value)
             .OrderBy(c => c.Nome)
             .ToListAsync();
@@ -16,6 +19,7 @@ public class ClienteService(SalgaFacilDbContext db)
     public Task<List<ClienteComResumo>> ListarComResumoAsync(string? busca = null) =>
         db.Clientes
             .Include(c => c.Enderecos)
+            .Where(c => c.EmpresaId == EmpresaId)
             .Where(c => string.IsNullOrWhiteSpace(busca)
                 || c.Nome.Contains(busca)
                 || c.Telefone.Contains(busca)
@@ -40,7 +44,7 @@ public class ClienteService(SalgaFacilDbContext db)
     public Task<Cliente?> ObterAsync(int id) =>
         db.Clientes
             .Include(c => c.Enderecos)
-            .FirstOrDefaultAsync(c => c.Id == id);
+            .FirstOrDefaultAsync(c => c.Id == id && c.EmpresaId == EmpresaId);
 
     public async Task SalvarAsync(Cliente cliente)
     {
@@ -51,7 +55,6 @@ public class ClienteService(SalgaFacilDbContext db)
         if (!string.IsNullOrWhiteSpace(cliente.Email) && !cliente.Email.Contains('@'))
             throw new InvalidOperationException("E-mail inválido.");
 
-        // Garante no máximo um endereço principal
         var principais = cliente.Enderecos.Count(e => e.Principal);
         if (principais > 1)
             throw new InvalidOperationException("Apenas um endereço pode ser o principal.");
@@ -60,6 +63,7 @@ public class ClienteService(SalgaFacilDbContext db)
 
         if (cliente.Id == 0)
         {
+            cliente.EmpresaId = EmpresaId;
             cliente.CriadoEm = DateTime.UtcNow;
             db.Clientes.Add(cliente);
         }
@@ -67,7 +71,7 @@ public class ClienteService(SalgaFacilDbContext db)
         {
             var existente = await db.Clientes
                 .Include(c => c.Enderecos)
-                .FirstOrDefaultAsync(c => c.Id == cliente.Id)
+                .FirstOrDefaultAsync(c => c.Id == cliente.Id && c.EmpresaId == EmpresaId)
                 ?? throw new InvalidOperationException("Cliente não encontrado.");
 
             existente.Nome = cliente.Nome;
@@ -81,7 +85,6 @@ public class ClienteService(SalgaFacilDbContext db)
             existente.Ativo = cliente.Ativo;
             existente.AtualizadoEm = DateTime.UtcNow;
 
-            // Sincroniza endereços
             db.EnderecosCliente.RemoveRange(existente.Enderecos);
             foreach (var end in cliente.Enderecos)
             {
@@ -99,7 +102,7 @@ public class ClienteService(SalgaFacilDbContext db)
 
     public async Task AlternarAtivoAsync(int id)
     {
-        var cliente = await db.Clientes.FindAsync(id)
+        var cliente = await db.Clientes.FirstOrDefaultAsync(c => c.Id == id && c.EmpresaId == EmpresaId)
             ?? throw new InvalidOperationException("Cliente não encontrado.");
         cliente.Ativo = !cliente.Ativo;
         cliente.AtualizadoEm = DateTime.UtcNow;
@@ -108,10 +111,10 @@ public class ClienteService(SalgaFacilDbContext db)
 
     public async Task ExcluirAsync(int id)
     {
-        var cliente = await db.Clientes.FindAsync(id);
+        var cliente = await db.Clientes.FirstOrDefaultAsync(c => c.Id == id && c.EmpresaId == EmpresaId);
         if (cliente is null) return;
 
-        var temPedido = await db.Pedidos.AnyAsync(p => p.ClienteId == id);
+        var temPedido = await db.Pedidos.AnyAsync(p => p.ClienteId == id && p.EmpresaId == EmpresaId);
         if (temPedido)
             throw new InvalidOperationException("Não é possível excluir: cliente possui pedidos. Inative-o.");
 

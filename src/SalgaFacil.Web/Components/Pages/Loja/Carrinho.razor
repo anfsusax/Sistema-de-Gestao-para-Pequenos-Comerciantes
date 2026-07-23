@@ -1,0 +1,171 @@
+@page "/loja/{Slug}/carrinho"
+@layout SalgaFacil.Web.Components.Layout.PublicLayout
+@inject LojaPublicaService Loja
+@inject CarrinhoSessao Sacola
+@inject NavigationManager Nav
+
+<PageTitle>Carrinho — @(_empresa?.NomeFantasia ?? "Loja")</PageTitle>
+
+@if (_empresa is null)
+{
+    <div class="loja-empty"><h1>Loja não encontrada</h1><a href="/" class="btn btn-primary">Voltar</a></div>
+}
+else
+{
+    <div class="loja-checkout">
+        <a href="/loja/@Slug" class="btn btn-secondary">← Cardápio</a>
+        <h1>Seu pedido</h1>
+
+        @if (_linhas.Count == 0 && _pedidoId == 0)
+        {
+            <p class="loja-empty-msg">Carrinho vazio.</p>
+        }
+        else if (_linhas.Count > 0)
+        {
+            <div class="card" style="margin-bottom:16px">
+                <table class="data-table">
+                    <thead><tr><th>Produto</th><th>Qtd</th><th>Preço</th><th>Total</th><th></th></tr></thead>
+                    <tbody>
+                        @foreach (var l in _linhas)
+                        {
+                            <tr>
+                                <td>@l.Nome</td>
+                                <td>
+                                    <button class="btn-icon" @onclick="() => Alterar(l.ProdutoId, -1)">−</button>
+                                    @l.Quantidade
+                                    <button class="btn-icon" @onclick="() => Alterar(l.ProdutoId, 1)">+</button>
+                                </td>
+                                <td>@l.Preco.ToString("C", _ptBr)</td>
+                                <td>@((l.Preco * l.Quantidade).ToString("C", _ptBr))</td>
+                                <td><button class="btn-icon" @onclick="() => Remover(l.ProdutoId)">🗑️</button></td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+                <p style="text-align:right;font-weight:700;margin-top:12px">Total: @_linhas.Sum(l => l.Preco * l.Quantidade).ToString("C", _ptBr)</p>
+            </div>
+
+            <div class="card form-card">
+                <h2 style="font-size:16px;margin-bottom:12px">Seus dados</h2>
+                @if (!string.IsNullOrEmpty(_erro))
+                {
+                    <div class="login-error">@_erro</div>
+                }
+                <div class="form-group">
+                    <label>Nome *</label>
+                    <InputText class="form-control" @bind-Value="_pedido.Nome" />
+                </div>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label>Telefone</label>
+                        <InputText class="form-control" @bind-Value="_pedido.Telefone" />
+                    </div>
+                    <div class="form-group">
+                        <label>WhatsApp</label>
+                        <InputText class="form-control" @bind-Value="_pedido.WhatsApp" />
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label><input type="radio" name="modo" checked="@(!_pedido.Entrega)" @onchange="() => _pedido.Entrega = false" /> Retirada</label>
+                    <label style="margin-left:16px"><input type="radio" name="modo" checked="@_pedido.Entrega" @onchange="() => _pedido.Entrega = true" /> Entrega</label>
+                </div>
+                @if (_pedido.Entrega)
+                {
+                    <div class="form-group">
+                        <label>Endereço de entrega</label>
+                        <InputText class="form-control" @bind-Value="_pedido.EnderecoEntrega" />
+                    </div>
+                }
+                <div class="form-group">
+                    <label>Observações</label>
+                    <InputTextArea class="form-control" @bind-Value="_pedido.Observacoes" rows="2" />
+                </div>
+                <button class="btn btn-primary" disabled="@_enviando" @onclick="Enviar">@(_enviando ? "Enviando..." : "Confirmar pedido")</button>
+            </div>
+        }
+
+        @if (_pedidoId > 0)
+        {
+            <div class="card" style="margin-top:16px;padding:16px;border-left:4px solid var(--green)">
+                Pedido <strong>#@_pedidoId</strong> enviado com sucesso! Acompanhe pelo WhatsApp da loja.
+                <div style="margin-top:12px"><a class="btn btn-secondary" href="/loja/@Slug">Voltar ao cardápio</a></div>
+            </div>
+        }
+    </div>
+}
+
+@code {
+    [Parameter] public string Slug { get; set; } = "";
+    private Empresa? _empresa;
+    private List<Linha> _linhas = [];
+    private PedidoVisitanteDto _pedido = new();
+    private string? _erro;
+    private bool _enviando;
+    private int _pedidoId;
+    private readonly System.Globalization.CultureInfo _ptBr = new("pt-BR");
+
+    protected override async Task OnInitializedAsync()
+    {
+        _empresa = await Loja.ObterEmpresaPorSlugAsync(Slug);
+        if (_empresa == null) return;
+        await MontarLinhas();
+    }
+
+    private async Task MontarLinhas()
+    {
+        var itens = Sacola.Obter(Slug);
+        if (_empresa == null || itens.Count == 0) { _linhas = []; return; }
+        var produtos = await Loja.ListarProdutosAsync(_empresa.Id);
+        _linhas = itens
+            .Select(i =>
+            {
+                var p = produtos.FirstOrDefault(x => x.Id == i.ProdutoId);
+                return p == null ? null : new Linha { ProdutoId = p.Id, Nome = p.Nome, Preco = p.PrecoVenda, Quantidade = i.Quantidade };
+            })
+            .Where(l => l != null)
+            .Cast<Linha>()
+            .ToList();
+    }
+
+    private async Task Alterar(int produtoId, int delta)
+    {
+        var itens = Sacola.Obter(Slug);
+        var item = itens.FirstOrDefault(i => i.ProdutoId == produtoId);
+        if (item == null) return;
+        item.Quantidade += delta;
+        if (item.Quantidade <= 0) itens.Remove(item);
+        Sacola.Definir(Slug, itens);
+        await MontarLinhas();
+    }
+
+    private async Task Remover(int produtoId)
+    {
+        var itens = Sacola.Obter(Slug).Where(i => i.ProdutoId != produtoId).ToList();
+        Sacola.Definir(Slug, itens);
+        await MontarLinhas();
+    }
+
+    private async Task Enviar()
+    {
+        if (_empresa == null) return;
+        _enviando = true;
+        _erro = null;
+        try
+        {
+            _pedido.Itens = Sacola.Obter(Slug).ToList();
+            _pedidoId = await Loja.CriarPedidoVisitanteAsync(_empresa.Id, _pedido);
+            Sacola.Limpar(Slug);
+            _linhas = [];
+        }
+        catch (Exception ex) { _erro = ex.Message; }
+        finally { _enviando = false; }
+    }
+
+    private class Linha
+    {
+        public int ProdutoId { get; set; }
+        public string Nome { get; set; } = "";
+        public decimal Preco { get; set; }
+        public int Quantidade { get; set; }
+    }
+}
