@@ -1,8 +1,8 @@
-﻿@inherits LayoutComponentBase
+@inherits LayoutComponentBase
 @inject AuthService Auth
 @inject NavigationManager Nav
 
-@if (IsLoginPage)
+@if (IsPublicPage)
 {
     @Body
 }
@@ -18,9 +18,13 @@ else
                 </div>
             </div>
             <ul class="nav-menu">
-                <li><NavLink class="nav-link" href="/" Match="NavLinkMatch.All" ActiveClass="active">
+                <li><NavLink class="nav-link" href="/dashboard" Match="NavLinkMatch.All" ActiveClass="active">
                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg>
                     Dashboard
+                </NavLink></li>
+                <li><NavLink class="nav-link" href="/pdv" ActiveClass="active">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="5" width="20" height="14" rx="2"/><line x1="2" y1="10" x2="22" y2="10"/><line x1="6" y1="15" x2="10" y2="15"/></svg>
+                    Caixa (PDV)
                 </NavLink></li>
                 <li><NavLink class="nav-link" href="/pedidos" ActiveClass="active">
                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2"/><rect x="9" y="3" width="6" height="4" rx="1"/></svg>
@@ -72,11 +76,12 @@ else
 </div>
 
 @code {
-    private bool IsLoginPage => Nav.Uri.Contains("/login", StringComparison.OrdinalIgnoreCase);
+    private bool IsPublicPage =>
+        Nav.Uri.Contains("/login", StringComparison.OrdinalIgnoreCase);
 
     protected override void OnAfterRender(bool firstRender)
     {
-        if (firstRender && !Auth.EstaAutenticado && !IsLoginPage)
+        if (firstRender && !Auth.EstaAutenticado && !IsPublicPage)
             Nav.NavigateTo("/login");
     }
 }

@@ -1,0 +1,47 @@
+@page "/"
+@layout SalgaFacil.Web.Components.Layout.EmptyLayout
+@rendermode InteractiveServer
+
+<PageTitle>Salgados da Consu — Feita pra sua casa. Pra vida toda.</PageTitle>
+
+<HeadContent>
+    <link rel="stylesheet" href="css/landing.css" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@500;600;700;800&family=Pacifico&display=swap" rel="stylesheet" />
+</HeadContent>
+
+<main class="campaign" aria-label="Campanha Salgados da Consu">
+    <div class="campaign__background" role="img" aria-label="Cozinha com bandeja de salgados na mesa"></div>
+    <div class="campaign__orange-panel" aria-hidden="true"></div>
+
+    <section class="campaign__content">
+        <header class="brand">
+            <p class="brand__logo">Consu</p>
+            <p class="brand__tagline">Feito pra sua casa. Pra vida toda.</p>
+        </header>
+
+        <div class="campaign__headline">
+            <h1 class="campaign__title">Salgados</h1>
+            <p class="campaign__script">da Consu venha provar!</p>
+            <p class="campaign__lead">
+                Mais praticidade, sabor e<br />
+                crocância para o seu dia a dia.
+            </p>
+        </div>
+
+        <a class="campaign__cta" href="/login">
+            veja o cardápio
+        </a>
+    </section>
+
+    <aside class="campaign__decorative-text" aria-hidden="true">
+        <span class="deco deco--1">Mais sabor</span>
+        <span class="deco deco--2">Mais crocância</span>
+        <span class="deco deco--3">Mais delicioso!</span>
+        <svg class="deco__heart" viewBox="0 0 40 36" fill="none" aria-hidden="true">
+            <path d="M20 32.5C20 32.5 4 22.5 4 13.2C4 7.8 8.2 4.5 12.8 4.5C16.2 4.5 18.6 6.6 20 8.8C21.4 6.6 23.8 4.5 27.2 4.5C31.8 4.5 36 7.8 36 13.2C36 22.5 20 32.5 20 32.5Z"
+                  stroke="currentColor" stroke-width="2.2" stroke-linejoin="round"/>
+        </svg>
+    </aside>
+</main>

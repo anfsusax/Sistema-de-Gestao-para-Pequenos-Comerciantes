@@ -42,7 +42,7 @@
     {
         _erro = null;
         if (await Auth.LoginAsync(_model.Email, _model.Senha))
-            Nav.NavigateTo("/");
+            Nav.NavigateTo("/dashboard");
         else
             _erro = "Email ou senha incorretos.";
     }
