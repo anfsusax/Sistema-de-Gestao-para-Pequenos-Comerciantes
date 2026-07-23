@@ -1,0 +1,101 @@
+@page "/unidades"
+@rendermode InteractiveServer
+@inject UnidadeMedidaService Unidades
+@inject NavigationManager Nav
+
+<PageTitle>Unidades de Medida — SalgadosPro</PageTitle>
+
+<div class="page-header">
+    <div>
+        <h1>Unidades de Medida</h1>
+        <p class="subtitle">@_lista.Count(u => u.Ativo) ativas</p>
+    </div>
+    <a href="/unidades/novo" class="btn btn-primary">+ Nova Unidade</a>
+</div>
+
+@if (!string.IsNullOrEmpty(_mensagem))
+{
+    <div class="card" style="margin-bottom:16px;padding:12px 16px;border-left:4px solid var(--terracota)">@_mensagem</div>
+}
+
+<div class="card table-card">
+    <div class="table-toolbar">
+        <div class="search-input">
+            <span>🔍</span>
+            <input placeholder="Pesquisar sigla ou nome..." @bind="_busca" @bind:event="oninput" @onkeyup="Filtrar" />
+        </div>
+    </div>
+    <table class="data-table">
+        <thead>
+            <tr>
+                <th>Sigla</th>
+                <th>Nome</th>
+                <th>Status</th>
+                <th></th>
+            </tr>
+        </thead>
+        <tbody>
+            @foreach (var u in _filtrados)
+            {
+                <tr>
+                    <td><strong>@u.Sigla</strong></td>
+                    <td>@u.Nome</td>
+                    <td><span class="badge @(u.Ativo ? "badge-ativo" : "badge-inativo")">@(u.Ativo ? "Ativo" : "Inativo")</span></td>
+                    <td>
+                        <button class="btn-icon" title="Editar" @onclick="() => Editar(u.Id)">✏️</button>
+                        <button class="btn-icon" title="@(u.Ativo ? "Inativar" : "Ativar")" @onclick="() => Alternar(u.Id)">@(u.Ativo ? "⏸" : "▶")</button>
+                        <button class="btn-icon" title="Excluir" @onclick="() => Excluir(u.Id)">🗑️</button>
+                    </td>
+                </tr>
+            }
+        </tbody>
+    </table>
+</div>
+
+@code {
+    private List<UnidadeMedida> _lista = [];
+    private List<UnidadeMedida> _filtrados = [];
+    private string _busca = "";
+    private string? _mensagem;
+
+    protected override async Task OnInitializedAsync() => await Carregar();
+
+    private async Task Carregar()
+    {
+        _lista = await Unidades.ListarAsync();
+        Filtrar();
+    }
+
+    private void Filtrar()
+    {
+        _filtrados = string.IsNullOrWhiteSpace(_busca)
+            ? _lista
+            : _lista.Where(u =>
+                u.Sigla.Contains(_busca, StringComparison.OrdinalIgnoreCase) ||
+                u.Nome.Contains(_busca, StringComparison.OrdinalIgnoreCase)).ToList();
+    }
+
+    private void Editar(int id) => Nav.NavigateTo($"/unidades/editar/{id}");
+
+    private async Task Alternar(int id)
+    {
+        try
+        {
+            await Unidades.AlternarAtivoAsync(id);
+            _mensagem = null;
+            await Carregar();
+        }
+        catch (Exception ex) { _mensagem = ex.Message; }
+    }
+
+    private async Task Excluir(int id)
+    {
+        try
+        {
+            await Unidades.ExcluirAsync(id);
+            _mensagem = "Unidade excluída.";
+            await Carregar();
+        }
+        catch (Exception ex) { _mensagem = ex.Message; }
+    }
+}

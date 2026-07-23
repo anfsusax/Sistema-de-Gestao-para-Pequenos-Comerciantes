@@ -19,7 +19,7 @@ public class PedidoService(SalgaFacilDbContext db)
 
     public Task<Pedido?> ObterAsync(int id) =>
         db.Pedidos
-            .Include(p => p.Cliente)
+            .Include(p => p.Cliente).ThenInclude(c => c.Enderecos)
             .Include(p => p.Itens).ThenInclude(i => i.Produto)
             .Include(p => p.Itens).ThenInclude(i => i.Pacote)
             .FirstOrDefaultAsync(p => p.Id == id);

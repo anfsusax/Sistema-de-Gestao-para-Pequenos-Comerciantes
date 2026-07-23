@@ -65,9 +65,16 @@ else
             <div style="margin-top:24px;padding-top:16px;border-top:1px solid var(--border)">
                 <p style="font-size:13px;color:var(--text-muted)"><strong>Cliente:</strong> @_pedido.Cliente.Nome</p>
                 <p style="font-size:13px;color:var(--text-muted)"><strong>Telefone:</strong> @_pedido.Cliente.Telefone</p>
-                @if (_pedido.Cliente.Endereco != null)
+                @{
+                    var end = _pedido.Cliente.Enderecos.FirstOrDefault(e => e.Principal)
+                        ?? _pedido.Cliente.Enderecos.FirstOrDefault();
+                }
+                @if (end != null)
                 {
-                    <p style="font-size:13px;color:var(--text-muted)"><strong>Endereço:</strong> @_pedido.Cliente.Endereco</p>
+                    <p style="font-size:13px;color:var(--text-muted)">
+                        <strong>Endereço:</strong>
+                        @end.Logradouro@(string.IsNullOrWhiteSpace(end.Numero) ? "" : $", {end.Numero}") — @end.Cidade/@end.Estado
+                    </p>
                 }
             </div>
         </div>

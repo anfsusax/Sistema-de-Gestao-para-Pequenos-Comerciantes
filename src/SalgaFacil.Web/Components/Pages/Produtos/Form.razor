@@ -2,85 +2,152 @@
 @page "/produtos/editar/{Id:int}"
 @rendermode InteractiveServer
 @inject ProdutoService Produtos
+@inject CategoriaService Categorias
+@inject UnidadeMedidaService Unidades
 @inject NavigationManager Nav
 
 <PageTitle>@(_editando ? "Editar" : "Novo") Produto — SalgadosPro</PageTitle>
 
 <div class="page-header">
     <div>
-        <h1>@(_editando ? "Editar Produto" : "Novo Produto")</h1>
+        <h1>@(_editando ? "Editar Produto" : "Cadastro de Produto")</h1>
     </div>
     <a href="/produtos" class="btn btn-secondary">← Voltar</a>
 </div>
 
+@if (!string.IsNullOrEmpty(_erro))
+{
+    <div class="card" style="margin-bottom:16px;padding:12px 16px;border-left:4px solid #c0392b">@_erro</div>
+}
+
 <div class="card form-card">
     <EditForm Model="_produto" OnValidSubmit="Salvar">
+        <div class="form-row">
+            <div class="form-group">
+                <label>Código</label>
+                <InputText class="form-control" @bind-Value="_produto.Codigo" placeholder="Ex: SAL001" maxlength="40" />
+            </div>
+            <div class="form-group">
+                <label>Código de Barras</label>
+                <InputText class="form-control" @bind-Value="_produto.CodigoBarras" placeholder="Opcional — usado no PDV" maxlength="64" />
+            </div>
+        </div>
         <div class="form-group">
-            <label>Nome</label>
-            <InputText class="form-control" @bind-Value="_produto.Nome" placeholder="Ex: Coxinha de Frango" />
+            <label>Nome *</label>
+            <InputText class="form-control" @bind-Value="_produto.Nome" placeholder="Ex: Coxinha de Frango" maxlength="200" />
+        </div>
+        <div class="form-group">
+            <label>Descrição</label>
+            <InputTextArea class="form-control" @bind-Value="_produto.Descricao" rows="3" maxlength="1000" />
         </div>
         <div class="form-row">
             <div class="form-group">
-                <label>Categoria</label>
-                <InputText class="form-control" @bind-Value="_produto.Categoria" placeholder="Ex: Frango" />
+                <label>Categoria *</label>
+                <InputSelect class="form-control" @bind-Value="_produto.CategoriaId">
+                    <option value="0">Selecionar categoria</option>
+                    @foreach (var c in _categorias)
+                    {
+                        <option value="@c.Id">@c.Nome</option>
+                    }
+                </InputSelect>
             </div>
             <div class="form-group">
-                <label>Tipo</label>
-                <div class="radio-group" style="margin-top:10px">
-                    <label><input type="radio" name="tipo" checked="@(_produto.Tipo == TipoProduto.Frito)" @onchange="() => _produto.Tipo = TipoProduto.Frito" /> Frito</label>
-                    <label><input type="radio" name="tipo" checked="@(_produto.Tipo == TipoProduto.Assado)" @onchange="() => _produto.Tipo = TipoProduto.Assado" /> Assado</label>
-                </div>
+                <label>Unidade de Medida *</label>
+                <InputSelect class="form-control" @bind-Value="_produto.UnidadeMedidaId">
+                    <option value="0">Selecionar unidade</option>
+                    @foreach (var u in _unidades)
+                    {
+                        <option value="@u.Id">@u.Sigla — @u.Nome</option>
+                    }
+                </InputSelect>
+            </div>
+        </div>
+        <div class="form-group">
+            <label>Tipo de preparo</label>
+            <div class="radio-group" style="margin-top:10px">
+                <label><input type="radio" name="tipo" checked="@(_produto.Tipo == TipoProduto.Frito)" @onchange="() => _produto.Tipo = TipoProduto.Frito" /> Frito</label>
+                <label><input type="radio" name="tipo" checked="@(_produto.Tipo == TipoProduto.Assado)" @onchange="() => _produto.Tipo = TipoProduto.Assado" /> Assado</label>
             </div>
         </div>
         <div class="form-row">
             <div class="form-group">
-                <label>Preço Venda</label>
+                <label>Preço de Venda</label>
                 <InputNumber class="form-control" @bind-Value="_produto.PrecoVenda" />
             </div>
             <div class="form-group">
-                <label>Custo Estimado</label>
+                <label>Custo</label>
                 <InputNumber class="form-control" @bind-Value="_produto.CustoEstimado" />
             </div>
         </div>
         <div class="form-row">
             <div class="form-group">
-                <label>Código de Barras</label>
-                <InputText class="form-control" @bind-Value="_produto.CodigoBarras" placeholder="Opcional — usado na busca do PDV" />
-            </div>
-            <div class="form-group">
                 <label>Estoque Atual</label>
                 <InputNumber class="form-control" @bind-Value="_produto.EstoqueAtual" />
             </div>
+            <div class="form-group">
+                <label>Estoque Mínimo</label>
+                <InputNumber class="form-control" @bind-Value="_produto.EstoqueMinimo" />
+            </div>
         </div>
         <div class="form-group">
-            <label>Descrição</label>
-            <InputTextArea class="form-control" @bind-Value="_produto.Descricao" rows="3" />
+            <label>Imagem (URL)</label>
+            <InputText class="form-control" @bind-Value="_produto.FotoUrl" placeholder="https://..." maxlength="500" />
         </div>
         <div class="form-group">
             <label><InputCheckbox @bind-Value="_produto.Ativo" /> Produto ativo</label>
         </div>
-        <button type="submit" class="btn btn-primary">Salvar</button>
+        <div style="display:flex;gap:12px">
+            <a href="/produtos" class="btn btn-secondary">Cancelar</a>
+            <button type="submit" class="btn btn-primary" disabled="@_salvando">@(_salvando ? "Salvando..." : "Salvar")</button>
+        </div>
     </EditForm>
 </div>
 
 @code {
     [Parameter] public int Id { get; set; }
-    private Produto _produto = new() { Categoria = "Salgado", Tipo = TipoProduto.Frito, Ativo = true };
+    private Produto _produto = new() { Tipo = TipoProduto.Frito, Ativo = true };
+    private List<CategoriaProduto> _categorias = [];
+    private List<UnidadeMedida> _unidades = [];
     private bool _editando;
+    private bool _salvando;
+    private string? _erro;
 
     protected override async Task OnInitializedAsync()
     {
+        _categorias = await Categorias.ListarAsync(apenasAtivos: true);
+        _unidades = await Unidades.ListarAsync(apenasAtivos: true);
+
         if (Id > 0)
         {
             _editando = true;
             var p = await Produtos.ObterAsync(Id);
-            if (p != null) _produto = p;
+            if (p != null)
+            {
+                _produto = p;
+                if (_categorias.All(c => c.Id != p.CategoriaId) && p.Categoria != null)
+                    _categorias.Add(p.Categoria);
+                if (_unidades.All(u => u.Id != p.UnidadeMedidaId) && p.UnidadeMedida != null)
+                    _unidades.Add(p.UnidadeMedida);
+            }
+        }
+        else if (_categorias.Count > 0 && _unidades.Count > 0)
+        {
+            _produto.CategoriaId = _categorias[0].Id;
+            _produto.UnidadeMedidaId = _unidades[0].Id;
         }
     }
 
     private async Task Salvar()
     {
-        await Produtos.SalvarAsync(_produto);
-        Nav.NavigateTo("/produtos");
+        _salvando = true;
+        _erro = null;
+        try
+        {
+            // Evita tracking de navegações no Update
+            await Produtos.SalvarAsync(_produto);
+            Nav.NavigateTo("/produtos");
+        }
+        catch (Exception ex) { _erro = ex.Message; }
+        finally { _salvando = false; }
     }
 }

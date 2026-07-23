@@ -1,6 +1,7 @@
 @page "/produtos"
 @rendermode InteractiveServer
 @inject ProdutoService Produtos
+@inject CategoriaService Categorias
 @inject NavigationManager Nav
 
 <PageTitle>Produtos — SalgadosPro</PageTitle>
@@ -13,58 +14,76 @@
     <a href="/produtos/novo" class="btn btn-primary">+ Novo Produto</a>
 </div>
 
+@if (!string.IsNullOrEmpty(_mensagem))
+{
+    <div class="card" style="margin-bottom:16px;padding:12px 16px;border-left:4px solid var(--terracota)">@_mensagem</div>
+}
+
 <div class="card table-card">
-    <div class="table-toolbar">
+    <div class="table-toolbar" style="flex-wrap:wrap;gap:10px">
         <div class="search-input">
             <span>🔍</span>
-            <input placeholder="Buscar produto..." @bind="_busca" @bind:event="oninput" @onkeyup="Filtrar" />
+            <input placeholder="Pesquisar por nome ou código..." @bind="_busca" @bind:event="oninput" />
         </div>
-        <div class="filter-chips">
-            <button class="chip @(_tipoFiltro == null ? "active" : "")" @onclick='() => SetTipo(null)'>Todos</button>
-            <button class="chip @(_tipoFiltro == "Frito" ? "active" : "")" @onclick='() => SetTipo("Frito")'>Fritos</button>
-            <button class="chip @(_tipoFiltro == "Assado" ? "active" : "")" @onclick='() => SetTipo("Assado")'>Assados</button>
-        </div>
-        <div class="filter-chips" style="margin-left:auto">
-            <button class="chip @(_statusFiltro == null ? "active" : "")" @onclick="() => SetStatus(null)">Todos</button>
-            <button class="chip @(_statusFiltro == true ? "active" : "")" @onclick="() => SetStatus(true)">Ativos</button>
-            <button class="chip @(_statusFiltro == false ? "active" : "")" @onclick="() => SetStatus(false)">Inativos</button>
-        </div>
+        <select class="form-control" style="width:auto;min-width:160px" @bind="_categoriaId">
+            <option value="0">Todas categorias</option>
+            @foreach (var c in _categorias)
+            {
+                <option value="@c.Id">@c.Nome</option>
+            }
+        </select>
+        <select class="form-control" style="width:auto;min-width:120px" @bind="_statusTexto">
+            <option value="">Todos status</option>
+            <option value="true">Ativos</option>
+            <option value="false">Inativos</option>
+        </select>
+        <button class="btn btn-secondary" @onclick="AplicarFiltros">Pesquisar</button>
     </div>
     <table class="data-table">
         <thead>
             <tr>
+                <th>Código</th>
                 <th>Produto</th>
                 <th>Categoria</th>
-                <th>Tipo</th>
+                <th>Unidade</th>
                 <th>Preço</th>
-                <th>Custo</th>
-                <th>Lucro/un.</th>
                 <th>Estoque</th>
                 <th>Status</th>
                 <th></th>
             </tr>
         </thead>
         <tbody>
-            @foreach (var p in _filtrados)
+            @if (_carregando)
             {
-                <tr>
-                    <td><strong>@p.Nome</strong></td>
-                    <td>@p.Categoria</td>
-                    <td><TipoBadge Tipo="@p.Tipo" /></td>
-                    <td class="valor">@p.PrecoVenda.ToString("C", _ptBr)</td>
-                    <td class="custo">@p.CustoEstimado.ToString("C", _ptBr)</td>
-                    <td class="lucro">@((p.PrecoVenda - p.CustoEstimado).ToString("C", _ptBr))</td>
-                    <td>
-                        <span class="badge @(p.EstoqueAtual <= 0 ? "badge-inativo" : p.EstoqueAtual < 20 ? "badge-aguardando" : "badge-ativo")">
-                            @p.EstoqueAtual un.
-                        </span>
-                    </td>
-                    <td><span class="badge @(p.Ativo ? "badge-ativo" : "badge-inativo")">@(p.Ativo ? "Ativo" : "Inativo")</span></td>
-                    <td>
-                        <button class="btn-icon" title="Editar" @onclick="() => Editar(p.Id)">✏️</button>
-                        <button class="btn-icon" title="Excluir" @onclick="() => Excluir(p.Id)">🗑️</button>
-                    </td>
-                </tr>
+                <tr><td colspan="8">Carregando...</td></tr>
+            }
+            else if (_lista.Count == 0)
+            {
+                <tr><td colspan="8">Nenhum produto encontrado.</td></tr>
+            }
+            else
+            {
+                @foreach (var p in _lista)
+                {
+                    <tr>
+                        <td>@(p.Codigo ?? "—")</td>
+                        <td><strong>@p.Nome</strong></td>
+                        <td>@(p.Categoria?.Nome ?? "—")</td>
+                        <td>@(p.UnidadeMedida?.Sigla ?? "—")</td>
+                        <td class="valor">@p.PrecoVenda.ToString("C", _ptBr)</td>
+                        <td>
+                            <span class="badge @(p.EstoqueAtual <= 0 ? "badge-inativo" : p.EstoqueAtual <= p.EstoqueMinimo ? "badge-aguardando" : "badge-ativo")">
+                                @FormatEstoque(p)
+                            </span>
+                        </td>
+                        <td><span class="badge @(p.Ativo ? "badge-ativo" : "badge-inativo")">@(p.Ativo ? "Ativo" : "Inativo")</span></td>
+                        <td>
+                            <button class="btn-icon" title="Editar" @onclick="() => Editar(p.Id)">✏️</button>
+                            <button class="btn-icon" title="@(p.Ativo ? "Inativar" : "Ativar")" @onclick="() => Alternar(p.Id)">@(p.Ativo ? "⏸" : "▶")</button>
+                            <button class="btn-icon" title="Excluir" @onclick="() => Excluir(p.Id)">🗑️</button>
+                        </td>
+                    </tr>
+                }
             }
         </tbody>
     </table>
@@ -72,41 +91,64 @@
 
 @code {
     private List<Produto> _lista = [];
-    private List<Produto> _filtrados = [];
-    private string? _tipoFiltro;
-    private bool? _statusFiltro;
+    private List<CategoriaProduto> _categorias = [];
     private string _busca = "";
+    private int _categoriaId;
+    private string _statusTexto = "";
+    private string? _mensagem;
+    private bool _carregando = true;
     private readonly System.Globalization.CultureInfo _ptBr = new("pt-BR");
 
-    protected override async Task OnInitializedAsync() => await Carregar();
-
-    private async Task Carregar()
+    protected override async Task OnInitializedAsync()
     {
-        _lista = await Produtos.ListarAsync();
-        Filtrar();
+        _categorias = await Categorias.ListarAsync();
+        await AplicarFiltros();
     }
-
-    private async Task SetTipo(string? tipo) { _tipoFiltro = tipo; await AplicarFiltros(); }
-    private async Task SetStatus(bool? ativo) { _statusFiltro = ativo; await AplicarFiltros(); }
 
     private async Task AplicarFiltros()
     {
-        _lista = await Produtos.ListarAsync(_tipoFiltro, _statusFiltro);
-        Filtrar();
+        _carregando = true;
+        bool? status = _statusTexto switch
+        {
+            "true" => true,
+            "false" => false,
+            _ => null
+        };
+        int? cat = _categoriaId > 0 ? _categoriaId : null;
+        _lista = await Produtos.ListarAsync(apenasAtivos: status, categoriaId: cat, busca: _busca);
+        _carregando = false;
     }
 
-    private void Filtrar()
+    private static string FormatEstoque(Produto p)
     {
-        _filtrados = string.IsNullOrWhiteSpace(_busca)
-            ? _lista
-            : _lista.Where(p => p.Nome.Contains(_busca, StringComparison.OrdinalIgnoreCase)).ToList();
+        var sigla = p.UnidadeMedida?.Sigla ?? "";
+        var qtd = p.EstoqueAtual == Math.Truncate(p.EstoqueAtual)
+            ? ((int)p.EstoqueAtual).ToString()
+            : p.EstoqueAtual.ToString("0.###");
+        return string.IsNullOrEmpty(sigla) ? qtd : $"{qtd} {sigla}";
     }
 
     private void Editar(int id) => Nav.NavigateTo($"/produtos/editar/{id}");
 
+    private async Task Alternar(int id)
+    {
+        try
+        {
+            await Produtos.AlternarAtivoAsync(id);
+            _mensagem = null;
+            await AplicarFiltros();
+        }
+        catch (Exception ex) { _mensagem = ex.Message; }
+    }
+
     private async Task Excluir(int id)
     {
-        await Produtos.ExcluirAsync(id);
-        await Carregar();
+        try
+        {
+            await Produtos.ExcluirAsync(id);
+            _mensagem = "Produto excluído.";
+            await AplicarFiltros();
+        }
+        catch (Exception ex) { _mensagem = ex.Message; }
     }
 }

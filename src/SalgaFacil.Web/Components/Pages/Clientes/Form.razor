@@ -11,32 +11,135 @@
     <a href="/clientes" class="btn btn-secondary">← Voltar</a>
 </div>
 
+@if (!string.IsNullOrEmpty(_erro))
+{
+    <div class="card" style="margin-bottom:16px;padding:12px 16px;border-left:4px solid #c0392b">@_erro</div>
+}
+
 <div class="card form-card">
     <EditForm Model="_cliente" OnValidSubmit="Salvar">
+        <h3 style="margin:0 0 16px;font-size:16px">Dados do Cliente</h3>
         <div class="form-group">
-            <label>Nome</label>
-            <InputText class="form-control" @bind-Value="_cliente.Nome" />
+            <label>Nome *</label>
+            <InputText class="form-control" @bind-Value="_cliente.Nome" maxlength="200" />
         </div>
-        <div class="form-group">
-            <label>Telefone</label>
-            <InputText class="form-control" @bind-Value="_cliente.Telefone" placeholder="(11) 99999-0000" />
+        <div class="form-row">
+            <div class="form-group">
+                <label>CPF</label>
+                <InputText class="form-control" @bind-Value="_cliente.Cpf" maxlength="14" />
+            </div>
+            <div class="form-group">
+                <label>CNPJ</label>
+                <InputText class="form-control" @bind-Value="_cliente.Cnpj" maxlength="18" />
+            </div>
         </div>
-        <div class="form-group">
-            <label>Endereço</label>
-            <InputText class="form-control" @bind-Value="_cliente.Endereco" />
+        <div class="form-row">
+            <div class="form-group">
+                <label>Telefone</label>
+                <InputText class="form-control" @bind-Value="_cliente.Telefone" placeholder="(11) 99999-0000" maxlength="30" />
+            </div>
+            <div class="form-group">
+                <label>WhatsApp</label>
+                <InputText class="form-control" @bind-Value="_cliente.WhatsApp" placeholder="(11) 99999-0000" maxlength="30" />
+            </div>
+        </div>
+        <div class="form-row">
+            <div class="form-group">
+                <label>E-mail</label>
+                <InputText class="form-control" @bind-Value="_cliente.Email" maxlength="200" />
+            </div>
+            <div class="form-group">
+                <label>Data de nascimento</label>
+                <InputDate class="form-control" @bind-Value="_cliente.DataNascimento" />
+            </div>
         </div>
         <div class="form-group">
             <label>Observações</label>
-            <InputTextArea class="form-control" @bind-Value="_cliente.Observacoes" rows="3" />
+            <InputTextArea class="form-control" @bind-Value="_cliente.Observacoes" rows="3" maxlength="1000" />
         </div>
-        <button type="submit" class="btn btn-primary">Salvar</button>
+        <div class="form-group">
+            <label><InputCheckbox @bind-Value="_cliente.Ativo" /> Cliente ativo</label>
+        </div>
+
+        <hr style="margin:24px 0;border:none;border-top:1px solid var(--border)" />
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">
+            <h3 style="margin:0;font-size:16px">Endereços</h3>
+            <button type="button" class="btn btn-secondary" @onclick="AdicionarEndereco">+ Adicionar Endereço</button>
+        </div>
+
+        @if (_cliente.Enderecos.Count == 0)
+        {
+            <p class="subtitle">Nenhum endereço cadastrado.</p>
+        }
+
+        @for (var i = 0; i < _cliente.Enderecos.Count; i++)
+        {
+            var idx = i;
+            var end = _cliente.Enderecos.ElementAt(idx);
+            <div class="card" style="margin-bottom:12px;padding:16px;box-shadow:none;border:1px solid var(--border)">
+                <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">
+                    <strong>Endereço @(idx + 1)</strong>
+                    <div style="display:flex;gap:8px;align-items:center">
+                        <label style="font-size:13px;margin:0">
+                            <input type="radio" name="principal" checked="@end.Principal" @onchange="() => DefinirPrincipal(idx)" /> Principal
+                        </label>
+                        <button type="button" class="btn-icon" title="Remover" @onclick="() => RemoverEndereco(idx)">🗑️</button>
+                    </div>
+                </div>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label>CEP</label>
+                        <InputText class="form-control" @bind-Value="end.Cep" maxlength="10" />
+                    </div>
+                    <div class="form-group" style="flex:2">
+                        <label>Logradouro *</label>
+                        <InputText class="form-control" @bind-Value="end.Logradouro" maxlength="200" />
+                    </div>
+                    <div class="form-group">
+                        <label>Número</label>
+                        <InputText class="form-control" @bind-Value="end.Numero" maxlength="20" />
+                    </div>
+                </div>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label>Complemento</label>
+                        <InputText class="form-control" @bind-Value="end.Complemento" maxlength="100" />
+                    </div>
+                    <div class="form-group">
+                        <label>Bairro</label>
+                        <InputText class="form-control" @bind-Value="end.Bairro" maxlength="100" />
+                    </div>
+                </div>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label>Cidade *</label>
+                        <InputText class="form-control" @bind-Value="end.Cidade" maxlength="100" />
+                    </div>
+                    <div class="form-group">
+                        <label>UF *</label>
+                        <InputText class="form-control" @bind-Value="end.Estado" maxlength="2" placeholder="SP" />
+                    </div>
+                    <div class="form-group">
+                        <label>Referência</label>
+                        <InputText class="form-control" @bind-Value="end.Referencia" maxlength="200" />
+                    </div>
+                </div>
+            </div>
+        }
+
+        <div style="display:flex;gap:12px;margin-top:16px">
+            <a href="/clientes" class="btn btn-secondary">Cancelar</a>
+            <button type="submit" class="btn btn-primary" disabled="@_salvando">@(_salvando ? "Salvando..." : "Salvar")</button>
+        </div>
     </EditForm>
 </div>
 
 @code {
     [Parameter] public int Id { get; set; }
-    private Cliente _cliente = new();
+    private Cliente _cliente = new() { Ativo = true };
     private bool _editando;
+    private bool _salvando;
+    private string? _erro;
 
     protected override async Task OnInitializedAsync()
     {
@@ -44,13 +147,52 @@
         {
             _editando = true;
             var c = await Clientes.ObterAsync(Id);
-            if (c != null) _cliente = c;
+            if (c != null)
+            {
+                _cliente = c;
+                _cliente.Enderecos = c.Enderecos.ToList();
+            }
         }
+    }
+
+    private void AdicionarEndereco()
+    {
+        _cliente.Enderecos.Add(new EnderecoCliente
+        {
+            Principal = _cliente.Enderecos.Count == 0,
+            Estado = "SP"
+        });
+    }
+
+    private void RemoverEndereco(int index)
+    {
+        var list = _cliente.Enderecos.ToList();
+        if (index < 0 || index >= list.Count) return;
+        var removed = list[index];
+        list.RemoveAt(index);
+        if (removed.Principal && list.Count > 0)
+            list[0].Principal = true;
+        _cliente.Enderecos = list;
+    }
+
+    private void DefinirPrincipal(int index)
+    {
+        var list = _cliente.Enderecos.ToList();
+        for (var i = 0; i < list.Count; i++)
+            list[i].Principal = i == index;
+        _cliente.Enderecos = list;
     }
 
     private async Task Salvar()
     {
-        await Clientes.SalvarAsync(_cliente);
-        Nav.NavigateTo("/clientes");
+        _salvando = true;
+        _erro = null;
+        try
+        {
+            await Clientes.SalvarAsync(_cliente);
+            Nav.NavigateTo("/clientes");
+        }
+        catch (Exception ex) { _erro = ex.Message; }
+        finally { _salvando = false; }
     }
 }

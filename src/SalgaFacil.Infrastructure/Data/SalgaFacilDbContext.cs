@@ -7,8 +7,11 @@ public class SalgaFacilDbContext : DbContext
 {
     public SalgaFacilDbContext(DbContextOptions<SalgaFacilDbContext> options) : base(options) { }
 
+    public DbSet<CategoriaProduto> CategoriasProduto => Set<CategoriaProduto>();
+    public DbSet<UnidadeMedida> UnidadesMedida => Set<UnidadeMedida>();
     public DbSet<Produto> Produtos => Set<Produto>();
     public DbSet<Cliente> Clientes => Set<Cliente>();
+    public DbSet<EnderecoCliente> EnderecosCliente => Set<EnderecoCliente>();
     public DbSet<Pacote> Pacotes => Set<Pacote>();
     public DbSet<PacoteItem> PacoteItens => Set<PacoteItem>();
     public DbSet<Pedido> Pedidos => Set<Pedido>();
@@ -22,22 +25,66 @@ public class SalgaFacilDbContext : DbContext
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
+        modelBuilder.Entity<CategoriaProduto>(e =>
+        {
+            e.Property(c => c.Nome).HasMaxLength(100).IsRequired();
+            e.Property(c => c.Descricao).HasMaxLength(500);
+            e.HasIndex(c => c.Nome).IsUnique();
+            e.HasIndex(c => c.Ordem);
+        });
+
+        modelBuilder.Entity<UnidadeMedida>(e =>
+        {
+            e.Property(u => u.Sigla).HasMaxLength(10).IsRequired();
+            e.Property(u => u.Nome).HasMaxLength(80).IsRequired();
+            e.HasIndex(u => u.Sigla).IsUnique();
+        });
+
         modelBuilder.Entity<Produto>(e =>
         {
+            e.Property(p => p.Codigo).HasMaxLength(40);
+            e.Property(p => p.Nome).HasMaxLength(200).IsRequired();
+            e.Property(p => p.Descricao).HasMaxLength(1000);
+            e.Property(p => p.FotoUrl).HasMaxLength(500);
+            e.Property(p => p.CodigoBarras).HasMaxLength(64);
             e.Property(p => p.PrecoVenda).HasPrecision(18, 2);
             e.Property(p => p.CustoEstimado).HasPrecision(18, 2);
-            e.Property(p => p.Nome).HasMaxLength(200);
-            e.Property(p => p.Categoria).HasMaxLength(100);
-            e.Property(p => p.CodigoBarras).HasMaxLength(64);
-            // Índice único: PostgreSQL e SQLite permitem múltiplos NULL (cada NULL é distinto).
+            e.Property(p => p.EstoqueAtual).HasPrecision(18, 3);
+            e.Property(p => p.EstoqueMinimo).HasPrecision(18, 3);
+            e.HasIndex(p => p.Codigo);
+            e.HasIndex(p => p.Nome);
+            e.HasIndex(p => p.CategoriaId);
+            // PostgreSQL permite múltiplos NULL em índice único.
             e.HasIndex(p => p.CodigoBarras).IsUnique();
+            e.HasOne(p => p.Categoria).WithMany(c => c.Produtos).HasForeignKey(p => p.CategoriaId).OnDelete(DeleteBehavior.Restrict);
+            e.HasOne(p => p.UnidadeMedida).WithMany(u => u.Produtos).HasForeignKey(p => p.UnidadeMedidaId).OnDelete(DeleteBehavior.Restrict);
         });
 
         modelBuilder.Entity<Cliente>(e =>
         {
-            e.Property(c => c.Nome).HasMaxLength(200);
+            e.Property(c => c.Nome).HasMaxLength(200).IsRequired();
             e.Property(c => c.Telefone).HasMaxLength(30);
+            e.Property(c => c.WhatsApp).HasMaxLength(30);
             e.Property(c => c.Cpf).HasMaxLength(14);
+            e.Property(c => c.Cnpj).HasMaxLength(18);
+            e.Property(c => c.Email).HasMaxLength(200);
+            e.Property(c => c.Observacoes).HasMaxLength(1000);
+            e.HasIndex(c => c.Nome);
+            e.HasIndex(c => c.Telefone);
+            e.HasIndex(c => c.WhatsApp);
+        });
+
+        modelBuilder.Entity<EnderecoCliente>(e =>
+        {
+            e.Property(a => a.Cep).HasMaxLength(10);
+            e.Property(a => a.Logradouro).HasMaxLength(200).IsRequired();
+            e.Property(a => a.Numero).HasMaxLength(20);
+            e.Property(a => a.Complemento).HasMaxLength(100);
+            e.Property(a => a.Bairro).HasMaxLength(100);
+            e.Property(a => a.Cidade).HasMaxLength(100).IsRequired();
+            e.Property(a => a.Estado).HasMaxLength(2).IsRequired();
+            e.Property(a => a.Referencia).HasMaxLength(200);
+            e.HasOne(a => a.Cliente).WithMany(c => c.Enderecos).HasForeignKey(a => a.ClienteId).OnDelete(DeleteBehavior.Cascade);
         });
 
         modelBuilder.Entity<Pacote>(e =>
@@ -65,8 +112,6 @@ public class SalgaFacilDbContext : DbContext
             e.Property(v => v.Total).HasPrecision(18, 2);
             e.Property(v => v.ValorRecebido).HasPrecision(18, 2);
             e.Property(v => v.Troco).HasPrecision(18, 2);
-            // Cliente opcional: ao excluir um cliente, a venda historica permanece (ClienteId vira null)
-            // em vez de apagar o registro financeiro em cascata.
             e.HasOne(v => v.Cliente).WithMany().HasForeignKey(v => v.ClienteId).OnDelete(DeleteBehavior.SetNull);
             e.HasOne(v => v.Usuario).WithMany().HasForeignKey(v => v.UsuarioId).OnDelete(DeleteBehavior.Restrict);
             e.HasOne(v => v.SessaoCaixa).WithMany(s => s.Vendas).HasForeignKey(v => v.SessaoCaixaId).OnDelete(DeleteBehavior.Restrict);

@@ -1,16 +1,16 @@
-@page "/clientes"
+@page "/categorias"
 @rendermode InteractiveServer
-@inject ClienteService Clientes
+@inject CategoriaService Categorias
 @inject NavigationManager Nav
 
-<PageTitle>Clientes — SalgadosPro</PageTitle>
+<PageTitle>Categorias — SalgadosPro</PageTitle>
 
 <div class="page-header">
     <div>
-        <h1>Clientes</h1>
-        <p class="subtitle">@_lista.Count(c => c.Ativo) ativos · @_lista.Count cadastrados</p>
+        <h1>Categorias</h1>
+        <p class="subtitle">@_lista.Count(c => c.Ativo) ativas</p>
     </div>
-    <a href="/clientes/novo" class="btn btn-primary">+ Novo Cliente</a>
+    <a href="/categorias/novo" class="btn btn-primary">+ Nova Categoria</a>
 </div>
 
 @if (!string.IsNullOrEmpty(_mensagem))
@@ -22,17 +22,15 @@
     <div class="table-toolbar">
         <div class="search-input">
             <span>🔍</span>
-            <input placeholder="Pesquisar nome, telefone ou WhatsApp..." @bind="_busca" @bind:event="oninput" />
+            <input placeholder="Pesquisar categoria..." @bind="_busca" @bind:event="oninput" @onkeyup="Filtrar" />
         </div>
-        <button class="btn btn-secondary" @onclick="Carregar">Pesquisar</button>
+        <button class="btn btn-secondary" @onclick="Filtrar">Buscar</button>
     </div>
     <table class="data-table">
         <thead>
             <tr>
                 <th>Nome</th>
-                <th>WhatsApp</th>
-                <th>Cidade</th>
-                <th>Pedidos</th>
+                <th>Ordem</th>
                 <th>Status</th>
                 <th></th>
             </tr>
@@ -40,26 +38,25 @@
         <tbody>
             @if (_carregando)
             {
-                <tr><td colspan="6">Carregando...</td></tr>
+                <tr><td colspan="4">Carregando...</td></tr>
             }
-            else if (_lista.Count == 0)
+            else if (_filtrados.Count == 0)
             {
-                <tr><td colspan="6">Nenhum cliente encontrado.</td></tr>
+                <tr><td colspan="4">Nenhuma categoria encontrada.</td></tr>
             }
             else
             {
-                @foreach (var c in _lista)
+                @foreach (var c in _filtrados)
                 {
                     <tr>
                         <td>
-                            <div class="row-user">
-                                <UserAvatar Nome="@c.Nome" />
-                                <strong>@c.Nome</strong>
-                            </div>
+                            <strong>@c.Nome</strong>
+                            @if (!string.IsNullOrWhiteSpace(c.Descricao))
+                            {
+                                <div style="font-size:12px;color:var(--text-muted)">@c.Descricao</div>
+                            }
                         </td>
-                        <td>@(c.WhatsApp ?? c.Telefone)</td>
-                        <td>@(c.Cidade ?? "—")</td>
-                        <td>@c.TotalPedidos</td>
+                        <td>@c.Ordem</td>
                         <td><span class="badge @(c.Ativo ? "badge-ativo" : "badge-inativo")">@(c.Ativo ? "Ativo" : "Inativo")</span></td>
                         <td>
                             <button class="btn-icon" title="Editar" @onclick="() => Editar(c.Id)">✏️</button>
@@ -74,7 +71,8 @@
 </div>
 
 @code {
-    private List<ClienteComResumo> _lista = [];
+    private List<CategoriaProduto> _lista = [];
+    private List<CategoriaProduto> _filtrados = [];
     private string _busca = "";
     private string? _mensagem;
     private bool _carregando = true;
@@ -84,31 +82,45 @@
     private async Task Carregar()
     {
         _carregando = true;
-        _lista = await Clientes.ListarComResumoAsync(_busca);
+        _lista = await Categorias.ListarAsync();
+        Filtrar();
         _carregando = false;
     }
 
-    private void Editar(int id) => Nav.NavigateTo($"/clientes/editar/{id}");
+    private void Filtrar()
+    {
+        _filtrados = string.IsNullOrWhiteSpace(_busca)
+            ? _lista
+            : _lista.Where(c => c.Nome.Contains(_busca, StringComparison.OrdinalIgnoreCase)).ToList();
+    }
+
+    private void Editar(int id) => Nav.NavigateTo($"/categorias/editar/{id}");
 
     private async Task Alternar(int id)
     {
         try
         {
-            await Clientes.AlternarAtivoAsync(id);
+            await Categorias.AlternarAtivoAsync(id);
             _mensagem = null;
             await Carregar();
         }
-        catch (Exception ex) { _mensagem = ex.Message; }
+        catch (Exception ex)
+        {
+            _mensagem = ex.Message;
+        }
     }
 
     private async Task Excluir(int id)
     {
         try
         {
-            await Clientes.ExcluirAsync(id);
-            _mensagem = "Cliente excluído.";
+            await Categorias.ExcluirAsync(id);
+            _mensagem = "Categoria excluída.";
             await Carregar();
         }
-        catch (Exception ex) { _mensagem = ex.Message; }
+        catch (Exception ex)
+        {
+            _mensagem = ex.Message;
+        }
     }
 }
