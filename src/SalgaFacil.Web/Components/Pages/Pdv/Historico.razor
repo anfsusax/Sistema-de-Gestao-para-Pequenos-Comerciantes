@@ -1,0 +1,86 @@
+@page "/pdv/historico"
+@rendermode InteractiveServer
+@inject VendaService Vendas
+
+<PageTitle>Histórico de Vendas — SalgadosPro</PageTitle>
+
+<div class="page-header">
+    <div>
+        <h1>Histórico de Vendas</h1>
+        <p class="subtitle">@_vendas.Count(v => v.Status == StatusVenda.Finalizada) venda(s) no dia</p>
+    </div>
+    <PdvNav Atual="PdvNav.Aba.Historico" />
+</div>
+
+<div class="card table-card">
+    <div class="table-toolbar">
+        <div class="form-group" style="margin:0">
+            <input type="date" class="form-control" value="@_data.ToString("yyyy-MM-dd")" @onchange="OnDataChanged" style="max-width:200px" />
+        </div>
+    </div>
+    <table class="data-table">
+        <thead>
+            <tr>
+                <th>Venda</th>
+                <th>Hora</th>
+                <th>Cliente</th>
+                <th>Itens</th>
+                <th>Forma de Pagamento</th>
+                <th>Total</th>
+                <th>Status</th>
+            </tr>
+        </thead>
+        <tbody>
+            @foreach (var v in _vendas)
+            {
+                <tr>
+                    <td>#@v.Id.ToString("D6")</td>
+                    <td>@v.Data.ToLocalTime().ToString("HH:mm")</td>
+                    <td>@(v.Cliente?.Nome ?? "—")</td>
+                    <td>@v.Itens.Sum(i => i.Quantidade) un.</td>
+                    <td>@NomeForma(v.FormaPagamento)</td>
+                    <td class="valor">@v.Total.ToString("C", _ptBr)</td>
+                    <td><span class="badge @(v.Status == StatusVenda.Finalizada ? "badge-ativo" : "badge-inativo")">@(v.Status == StatusVenda.Finalizada ? "Finalizada" : "Cancelada")</span></td>
+                </tr>
+            }
+            @if (_vendas.Count == 0)
+            {
+                <tr><td colspan="7" style="text-align:center;color:var(--text-muted);padding:24px 0">Nenhuma venda nesta data.</td></tr>
+            }
+        </tbody>
+    </table>
+    @if (_vendas.Count > 0)
+    {
+        <div style="padding:16px;text-align:right;font-weight:700;border-top:1px solid var(--border)">
+            Total do dia: @_vendas.Where(v => v.Status == StatusVenda.Finalizada).Sum(v => v.Total).ToString("C", _ptBr)
+        </div>
+    }
+</div>
+
+@code {
+    private List<Venda> _vendas = [];
+    private DateTime _data = DateTime.Today;
+    private readonly System.Globalization.CultureInfo _ptBr = new("pt-BR");
+
+    protected override async Task OnInitializedAsync() => await Carregar();
+
+    private async Task OnDataChanged(ChangeEventArgs e)
+    {
+        if (DateTime.TryParse(e.Value?.ToString(), out var novaData))
+        {
+            _data = novaData;
+            await Carregar();
+        }
+    }
+
+    private async Task Carregar() => _vendas = await Vendas.ListarAsync(_data);
+
+    private static string NomeForma(FormaPagamento f) => f switch
+    {
+        FormaPagamento.Dinheiro => "Dinheiro",
+        FormaPagamento.Pix => "Pix",
+        FormaPagamento.CartaoDebito => "Cartão Débito",
+        FormaPagamento.CartaoCredito => "Cartão Crédito",
+        _ => f.ToString()
+    };
+}

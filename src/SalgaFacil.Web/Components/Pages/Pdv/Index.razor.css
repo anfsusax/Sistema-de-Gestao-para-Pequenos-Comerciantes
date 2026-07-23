@@ -1,0 +1,233 @@
+.pdv-grid {
+    display: grid;
+    grid-template-columns: 2fr 1fr;
+    gap: 16px;
+    align-items: start;
+}
+
+.pdv-card-venda, .pdv-card-resumo {
+    position: relative;
+}
+
+.pdv-itens-header {
+    margin: 20px 0 10px;
+}
+
+.pdv-stepper {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+    .pdv-stepper span {
+        min-width: 22px;
+        text-align: center;
+        font-weight: 700;
+    }
+
+    .pdv-stepper .btn-icon {
+        border: 1px solid var(--border);
+        border-radius: 8px;
+        width: 26px;
+        height: 26px;
+        line-height: 1;
+    }
+
+.pdv-acoes-itens {
+    display: flex;
+    gap: 10px;
+    margin-top: 14px;
+}
+
+.pdv-btn-limpar {
+    background: #fef2f2;
+    color: #b91c1c;
+    border: 1px solid #fecaca;
+}
+
+    .pdv-btn-limpar:hover {
+        background: #fee2e2;
+    }
+
+.pdv-cliente-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    margin-top: 8px;
+    padding: 6px 10px;
+    background: var(--terracota-light);
+    border-radius: var(--radius);
+    font-size: 13px;
+    font-weight: 600;
+}
+
+.pdv-dropdown {
+    margin-top: 6px;
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    background: var(--card);
+    max-height: 220px;
+    overflow-y: auto;
+    box-shadow: 0 8px 20px rgba(26, 29, 46, 0.08);
+}
+
+.pdv-dropdown-item {
+    display: block;
+    width: 100%;
+    text-align: left;
+    padding: 10px 14px;
+    border: none;
+    background: none;
+    cursor: pointer;
+    font-size: 13px;
+}
+
+    .pdv-dropdown-item:hover {
+        background: var(--bg);
+    }
+
+.pdv-dropdown-empty {
+    padding: 10px 14px;
+    font-size: 13px;
+    color: var(--text-muted);
+}
+
+.pdv-erro {
+    margin-top: 6px;
+    color: #b91c1c;
+    font-size: 13px;
+}
+
+.pdv-resumo-header {
+    margin-bottom: 16px;
+}
+
+.pdv-resumo-linha {
+    display: flex;
+    justify-content: space-between;
+    padding: 8px 0;
+    font-size: 14px;
+    color: var(--text-muted);
+    border-bottom: 1px solid var(--border);
+}
+
+.pdv-resumo-total {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-top: 14px;
+    padding-top: 14px;
+    font-size: 20px;
+    font-weight: 800;
+    color: var(--text);
+}
+
+.pdv-btn-finalizar {
+    width: 100%;
+    margin-top: 20px;
+    padding: 14px;
+    font-size: 15px;
+    font-weight: 700;
+}
+
+.pdv-card-pagamento, .pdv-card-finalizada {
+    max-width: 480px;
+    margin: 0 auto;
+    text-align: center;
+}
+
+    .pdv-card-pagamento h2, .pdv-card-finalizada h2 {
+        margin: 10px 0 2px;
+    }
+
+.pdv-total-pagar {
+    background: var(--blue-light, #dbeafe);
+    border-radius: var(--radius-lg, 16px);
+    padding: 18px;
+    margin: 20px 0;
+}
+
+    .pdv-total-pagar span {
+        display: block;
+        font-size: 13px;
+        color: var(--text-muted);
+        margin-bottom: 4px;
+    }
+
+    .pdv-total-pagar strong {
+        font-size: 28px;
+        color: var(--blue-text, #1d4ed8);
+    }
+
+.pdv-formas-pagamento {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 10px;
+}
+
+.pdv-forma-btn {
+    padding: 14px;
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    background: var(--card);
+    cursor: pointer;
+    font-weight: 600;
+    font-size: 14px;
+}
+
+    .pdv-forma-btn.ativo {
+        border-color: var(--blue-text, #1d4ed8);
+        background: var(--blue-light, #dbeafe);
+        color: var(--blue-text, #1d4ed8);
+    }
+
+.pdv-troco {
+    background: var(--green-light);
+    border-radius: var(--radius-lg, 16px);
+    padding: 16px;
+    margin: 16px 0;
+}
+
+    .pdv-troco span {
+        display: block;
+        font-size: 13px;
+        color: var(--text-muted);
+    }
+
+    .pdv-troco strong {
+        font-size: 22px;
+        color: var(--green-text);
+    }
+
+    .pdv-troco.negativo strong {
+        color: #b91c1c;
+    }
+
+.pdv-check {
+    width: 64px;
+    height: 64px;
+    line-height: 64px;
+    border-radius: 50%;
+    background: var(--green-light);
+    color: var(--green-text);
+    font-size: 28px;
+    margin: 0 auto 12px;
+}
+
+.pdv-troco-texto {
+    color: var(--green-text);
+    font-weight: 700;
+}
+
+.pdv-acoes-finalizada {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    margin-top: 20px;
+}
+
+@media (max-width: 900px) {
+    .pdv-grid {
+        grid-template-columns: 1fr;
+    }
+}

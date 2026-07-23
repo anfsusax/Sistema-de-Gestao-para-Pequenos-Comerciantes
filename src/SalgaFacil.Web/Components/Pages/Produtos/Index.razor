@@ -39,6 +39,7 @@
                 <th>Preço</th>
                 <th>Custo</th>
                 <th>Lucro/un.</th>
+                <th>Estoque</th>
                 <th>Status</th>
                 <th></th>
             </tr>
@@ -53,6 +54,11 @@
                     <td class="valor">@p.PrecoVenda.ToString("C", _ptBr)</td>
                     <td class="custo">@p.CustoEstimado.ToString("C", _ptBr)</td>
                     <td class="lucro">@((p.PrecoVenda - p.CustoEstimado).ToString("C", _ptBr))</td>
+                    <td>
+                        <span class="badge @(p.EstoqueAtual <= 0 ? "badge-inativo" : p.EstoqueAtual < 20 ? "badge-aguardando" : "badge-ativo")">
+                            @p.EstoqueAtual un.
+                        </span>
+                    </td>
                     <td><span class="badge @(p.Ativo ? "badge-ativo" : "badge-inativo")">@(p.Ativo ? "Ativo" : "Inativo")</span></td>
                     <td>
                         <button class="btn-icon" title="Editar" @onclick="() => Editar(p.Id)">✏️</button>

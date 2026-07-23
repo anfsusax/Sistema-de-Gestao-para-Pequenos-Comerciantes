@@ -12,6 +12,8 @@ builder.Services.AddScoped<ProdutoService>();
 builder.Services.AddScoped<ClienteService>();
 builder.Services.AddScoped<PacoteService>();
 builder.Services.AddScoped<PedidoService>();
+builder.Services.AddScoped<VendaService>();
+builder.Services.AddScoped<CaixaService>();
 builder.Services.AddScoped<DashboardService>();
 builder.Services.AddScoped<CustosService>();
 builder.Services.AddScoped<EmpresaService>();

@@ -34,12 +34,12 @@ public static class DbSeeder
 
         var produtos = new[]
         {
-            new Produto { Nome = "Coxinha de Frango", Categoria = "Frango", Tipo = TipoProduto.Frito, PrecoVenda = 3.50m, CustoEstimado = 1.20m, Ativo = true },
-            new Produto { Nome = "Bolinha de Queijo", Categoria = "Queijo", Tipo = TipoProduto.Frito, PrecoVenda = 2.80m, CustoEstimado = 0.90m, Ativo = true },
-            new Produto { Nome = "Risole de Camarão", Categoria = "Camarão", Tipo = TipoProduto.Frito, PrecoVenda = 4.00m, CustoEstimado = 1.80m, Ativo = true },
-            new Produto { Nome = "Pão de Queijo", Categoria = "Queijo", Tipo = TipoProduto.Assado, PrecoVenda = 2.00m, CustoEstimado = 0.70m, Ativo = true },
-            new Produto { Nome = "Empada de Frango", Categoria = "Frango", Tipo = TipoProduto.Assado, PrecoVenda = 4.50m, CustoEstimado = 1.60m, Ativo = true },
-            new Produto { Nome = "Kibe de Carne", Categoria = "Carne", Tipo = TipoProduto.Frito, PrecoVenda = 3.00m, CustoEstimado = 1.10m, Ativo = false }
+            new Produto { Nome = "Coxinha de Frango", Categoria = "Frango", Tipo = TipoProduto.Frito, PrecoVenda = 3.50m, CustoEstimado = 1.20m, EstoqueAtual = 80, CodigoBarras = "7891000000011", Ativo = true },
+            new Produto { Nome = "Bolinha de Queijo", Categoria = "Queijo", Tipo = TipoProduto.Frito, PrecoVenda = 2.80m, CustoEstimado = 0.90m, EstoqueAtual = 60, CodigoBarras = "7891000000028", Ativo = true },
+            new Produto { Nome = "Risole de Camarão", Categoria = "Camarão", Tipo = TipoProduto.Frito, PrecoVenda = 4.00m, CustoEstimado = 1.80m, EstoqueAtual = 40, Ativo = true },
+            new Produto { Nome = "Pão de Queijo", Categoria = "Queijo", Tipo = TipoProduto.Assado, PrecoVenda = 2.00m, CustoEstimado = 0.70m, EstoqueAtual = 100, CodigoBarras = "7891000000035", Ativo = true },
+            new Produto { Nome = "Empada de Frango", Categoria = "Frango", Tipo = TipoProduto.Assado, PrecoVenda = 4.50m, CustoEstimado = 1.60m, EstoqueAtual = 30, Ativo = true },
+            new Produto { Nome = "Kibe de Carne", Categoria = "Carne", Tipo = TipoProduto.Frito, PrecoVenda = 3.00m, CustoEstimado = 1.10m, EstoqueAtual = 0, Ativo = false }
         };
         db.Produtos.AddRange(produtos);
         await db.SaveChangesAsync();

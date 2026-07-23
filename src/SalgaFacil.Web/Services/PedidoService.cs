@@ -45,12 +45,49 @@ public class PedidoService(SalgaFacilDbContext db)
         return pedido.Id;
     }
 
+    /// <remarks>
+    /// Estoque: um Pedido é produzido sob encomenda (não sai de um estoque fixo pré-existente,
+    /// diferente da Venda de balcão), então o efeito no estoque acontece nas transições de
+    /// status, não na criação: "Pronto" significa que o item foi fisicamente produzido (soma ao
+    /// estoque); "Entregue" significa que o item saiu do estabelecimento (subtrai do estoque).
+    /// Isso mantém um único saldo de estoque coerente entre Pedido e Venda — produção (própria
+    /// ou excedente de um pedido) fica disponível para venda de balcão também.
+    /// O efeito só é aplicado uma vez por transição (compara com o status anterior) para não
+    /// duplicar caso o mesmo status seja setado de novo. Ver _ia/DECISOES.md.
+    /// </remarks>
     public async Task AtualizarStatusAsync(int id, StatusPedido novoStatus)
     {
-        var pedido = await db.Pedidos.FindAsync(id);
+        var pedido = await db.Pedidos
+            .Include(p => p.Itens).ThenInclude(i => i.Produto)
+            .Include(p => p.Itens).ThenInclude(i => i.Pacote).ThenInclude(pac => pac!.Itens).ThenInclude(pi => pi.Produto)
+            .FirstOrDefaultAsync(p => p.Id == id);
         if (pedido == null) return;
+
+        var statusAnterior = pedido.Status;
         pedido.Status = novoStatus;
+
+        if (novoStatus == StatusPedido.Pronto && statusAnterior != StatusPedido.Pronto)
+            AjustarEstoquePorPedido(pedido, sinal: 1);
+        else if (novoStatus == StatusPedido.Entregue && statusAnterior != StatusPedido.Entregue)
+            AjustarEstoquePorPedido(pedido, sinal: -1);
+
         await db.SaveChangesAsync();
+    }
+
+    private static void AjustarEstoquePorPedido(Pedido pedido, int sinal)
+    {
+        foreach (var item in pedido.Itens)
+        {
+            if (item.Produto != null)
+            {
+                item.Produto.EstoqueAtual += sinal * item.Quantidade;
+            }
+            else if (item.Pacote?.Itens != null)
+            {
+                foreach (var pi in item.Pacote.Itens)
+                    pi.Produto.EstoqueAtual += sinal * pi.Quantidade * item.Quantidade;
+            }
+        }
     }
 
     public async Task ExcluirAsync(int id)

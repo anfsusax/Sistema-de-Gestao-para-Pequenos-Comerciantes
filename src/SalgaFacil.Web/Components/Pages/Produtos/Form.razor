@@ -42,6 +42,16 @@
                 <InputNumber class="form-control" @bind-Value="_produto.CustoEstimado" />
             </div>
         </div>
+        <div class="form-row">
+            <div class="form-group">
+                <label>Código de Barras</label>
+                <InputText class="form-control" @bind-Value="_produto.CodigoBarras" placeholder="Opcional — usado na busca do PDV" />
+            </div>
+            <div class="form-group">
+                <label>Estoque Atual</label>
+                <InputNumber class="form-control" @bind-Value="_produto.EstoqueAtual" />
+            </div>
+        </div>
         <div class="form-group">
             <label>Descrição</label>
             <InputTextArea class="form-control" @bind-Value="_produto.Descricao" rows="3" />

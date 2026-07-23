@@ -1,0 +1,205 @@
+@page "/pdv/caixa"
+@rendermode InteractiveServer
+@inject CaixaService CaixaSvc
+@inject AuthService Auth
+@inject ILogger<Caixa> Logger
+
+<PageTitle>Caixa — SalgadosPro</PageTitle>
+
+<div class="page-header">
+    <div>
+        <h1>Caixa</h1>
+        <p class="subtitle">Abertura, sangria/suprimento e fechamento</p>
+    </div>
+    <PdvNav Atual="PdvNav.Aba.Caixa" />
+</div>
+
+@if (_sessao == null)
+{
+    <div class="card" style="max-width:420px">
+        <h2>Abrir Caixa</h2>
+        <p class="subtitle" style="margin-bottom:16px">Nenhuma sessão de caixa está aberta no momento.</p>
+        <div class="form-group">
+            <label>Valor de abertura (troco inicial)</label>
+            <input type="number" step="0.01" min="0" class="form-control" @bind="_valorAbertura" @bind:event="oninput" />
+        </div>
+        @if (_erro != null)
+        {
+            <p class="pdv-erro">@_erro</p>
+        }
+        <button type="button" class="btn btn-primary" @onclick="Abrir">Abrir Caixa</button>
+    </div>
+}
+else
+{
+    <div class="card" style="max-width:560px">
+        <h2>Caixa Aberto</h2>
+        <p class="subtitle" style="margin-bottom:16px">Desde @_sessao.DataAbertura.ToLocalTime().ToString("dd/MM/yyyy HH:mm") — @_sessao.UsuarioAbertura.Nome</p>
+
+        <div class="pdv-resumo-linha"><span>Valor de abertura</span><span>@_sessao.ValorAbertura.ToString("C", _ptBr)</span></div>
+        @if (_resumo != null)
+        {
+            <div class="pdv-resumo-linha"><span>Vendas em dinheiro</span><span>@_resumo.VendasDinheiro.ToString("C", _ptBr)</span></div>
+            <div class="pdv-resumo-linha"><span>Vendas em outras formas</span><span>@_resumo.VendasOutrasFormas.ToString("C", _ptBr)</span></div>
+            <div class="pdv-resumo-linha"><span>Suprimentos</span><span>+ @_resumo.Suprimentos.ToString("C", _ptBr)</span></div>
+            <div class="pdv-resumo-linha"><span>Sangrias</span><span>− @_resumo.Sangrias.ToString("C", _ptBr)</span></div>
+            <div class="pdv-resumo-total"><span>Esperado em caixa (dinheiro)</span><span>@_resumo.ValorEsperado.ToString("C", _ptBr)</span></div>
+        }
+
+        <div class="pdv-acoes-itens" style="margin-top:20px">
+            <button type="button" class="btn btn-secondary" @onclick="() => _acao = Acao.Sangria">🔻 Sangria</button>
+            <button type="button" class="btn btn-secondary" @onclick="() => _acao = Acao.Suprimento">🔺 Suprimento</button>
+        </div>
+
+        @if (_acao == Acao.Sangria || _acao == Acao.Suprimento)
+        {
+            <div class="form-group" style="margin-top:14px">
+                <label>@(_acao == Acao.Sangria ? "Valor da sangria" : "Valor do suprimento")</label>
+                <input type="number" step="0.01" min="0" class="form-control" @bind="_valorMovimento" @bind:event="oninput" />
+                <label style="margin-top:8px">Motivo</label>
+                <input class="form-control" @bind="_descricaoMovimento" placeholder="Ex: troco para outro caixa, pagamento a fornecedor..." />
+                @if (_erroMovimento != null)
+                {
+                    <p class="pdv-erro">@_erroMovimento</p>
+                }
+                <div class="pdv-acoes-itens" style="margin-top:10px">
+                    <button type="button" class="btn btn-primary" @onclick="ConfirmarMovimento">Confirmar</button>
+                    <button type="button" class="btn btn-secondary" @onclick="() => _acao = Acao.Nenhuma">Cancelar</button>
+                </div>
+            </div>
+        }
+
+        <div style="margin-top:24px;padding-top:16px;border-top:1px solid var(--border)">
+            @if (_acao != Acao.Fechar)
+            {
+                <button type="button" class="btn pdv-btn-limpar" @onclick="() => _acao = Acao.Fechar">Fechar Caixa</button>
+            }
+            else
+            {
+                <div class="form-group">
+                    <label>Valor contado no caixa (dinheiro)</label>
+                    <input type="number" step="0.01" min="0" class="form-control" @bind="_valorContado" @bind:event="oninput" />
+                </div>
+                @if (_resumo != null)
+                {
+                    <div class="pdv-troco @((_valorContado - _resumo.ValorEsperado) != 0 ? "negativo" : "")">
+                        <span>Diferença (contado − esperado)</span>
+                        <strong>@((_valorContado - _resumo.ValorEsperado).ToString("C", _ptBr))</strong>
+                    </div>
+                }
+                @if (_erroFechamento != null)
+                {
+                    <p class="pdv-erro">@_erroFechamento</p>
+                }
+                <div class="pdv-acoes-itens">
+                    <button type="button" class="btn btn-primary" @onclick="Fechar">Confirmar Fechamento</button>
+                    <button type="button" class="btn btn-secondary" @onclick="() => _acao = Acao.Nenhuma">Cancelar</button>
+                </div>
+            }
+        </div>
+    </div>
+}
+
+@code {
+    private enum Acao { Nenhuma, Sangria, Suprimento, Fechar }
+    private Acao _acao = Acao.Nenhuma;
+    private readonly System.Globalization.CultureInfo _ptBr = new("pt-BR");
+
+    private SessaoCaixa? _sessao;
+    private ResumoSessaoCaixa? _resumo;
+    private decimal _valorAbertura;
+    private string? _erro;
+
+    private decimal _valorMovimento;
+    private string _descricaoMovimento = string.Empty;
+    private string? _erroMovimento;
+
+    private decimal _valorContado;
+    private string? _erroFechamento;
+
+    protected override async Task OnInitializedAsync() => await Carregar();
+
+    private async Task Carregar()
+    {
+        _sessao = await CaixaSvc.ObterSessaoAbertaAsync();
+        _resumo = _sessao != null ? await CaixaSvc.ObterResumoAsync(_sessao.Id) : null;
+    }
+
+    private async Task Abrir()
+    {
+        _erro = null;
+        if (Auth.UsuarioAtual == null)
+        {
+            _erro = "Sua sessão expirou. Recarregue a página e faça login novamente.";
+            return;
+        }
+        try
+        {
+            await CaixaSvc.AbrirAsync(Auth.UsuarioAtual.Id, _valorAbertura);
+            await Carregar();
+        }
+        catch (InvalidOperationException ex)
+        {
+            _erro = ex.Message;
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Falha inesperada ao abrir caixa (usuarioId={UsuarioId}, valorAbertura={ValorAbertura})", Auth.UsuarioAtual.Id, _valorAbertura);
+            _erro = "Erro inesperado ao abrir o caixa. Veja o log do servidor para detalhes.";
+        }
+    }
+
+    private async Task ConfirmarMovimento()
+    {
+        _erroMovimento = null;
+        if (Auth.UsuarioAtual == null || _sessao == null)
+        {
+            _erroMovimento = "Sua sessão expirou. Recarregue a página e faça login novamente.";
+            return;
+        }
+        try
+        {
+            var tipo = _acao == Acao.Sangria ? TipoMovimentoCaixa.Sangria : TipoMovimentoCaixa.Suprimento;
+            await CaixaSvc.RegistrarMovimentoAsync(_sessao.Id, tipo, _valorMovimento, _descricaoMovimento, Auth.UsuarioAtual.Id);
+            _valorMovimento = 0;
+            _descricaoMovimento = string.Empty;
+            _acao = Acao.Nenhuma;
+            await Carregar();
+        }
+        catch (InvalidOperationException ex)
+        {
+            _erroMovimento = ex.Message;
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Falha inesperada ao registrar movimento de caixa (sessaoId={SessaoId})", _sessao.Id);
+            _erroMovimento = "Erro inesperado ao registrar o movimento. Veja o log do servidor para detalhes.";
+        }
+    }
+
+    private async Task Fechar()
+    {
+        _erroFechamento = null;
+        if (Auth.UsuarioAtual == null || _sessao == null)
+        {
+            _erroFechamento = "Sua sessão expirou. Recarregue a página e faça login novamente.";
+            return;
+        }
+        try
+        {
+            await CaixaSvc.FecharAsync(_sessao.Id, _valorContado, Auth.UsuarioAtual.Id);
+            _acao = Acao.Nenhuma;
+            _valorContado = 0;
+            await Carregar();
+        }
+        catch (InvalidOperationException ex)
+        {
+            _erroFechamento = ex.Message;
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Falha inesperada ao fechar caixa (sessaoId={SessaoId})", _sessao.Id);
+            _erroFechamento = "Erro inesperado ao fechar o caixa. Veja o log do servidor para detalhes.";
+        }
+    }
+}

@@ -1,0 +1,493 @@
+@page "/pdv"
+@rendermode InteractiveServer
+@implements IAsyncDisposable
+@inject VendaService Vendas
+@inject CaixaService Caixa
+@inject AuthService Auth
+@inject IJSRuntime JS
+
+<PageTitle>Caixa (PDV) — SalgadosPro</PageTitle>
+
+<script type="module" src="@Assets["Components/Pages/Pdv/Index.razor.js"]"></script>
+
+<div class="page-header">
+    <div>
+        <h1>Caixa</h1>
+        <p class="subtitle">Venda rápida de balcão</p>
+    </div>
+    <PdvNav Atual="PdvNav.Aba.Venda" />
+</div>
+
+@if (!_carregouSessao)
+{
+    <p class="subtitle">Carregando...</p>
+}
+else if (_sessaoAberta == null)
+{
+    <div class="card" style="max-width:420px">
+        <h2>Caixa fechado</h2>
+        <p class="subtitle" style="margin-bottom:16px">Não há uma sessão de caixa aberta. Abra o caixa antes de registrar vendas.</p>
+        <a href="/pdv/caixa" class="btn btn-primary">Abrir Caixa</a>
+    </div>
+}
+else if (_estado == EstadoTela.Montagem)
+{
+    <div class="pdv-grid">
+        <div class="card pdv-card-venda">
+            <div class="form-group">
+                <label>Cliente (opcional)</label>
+                <input class="form-control" placeholder="Buscar cliente por nome ou CPF..." @bind="_buscaCliente" @bind:event="oninput" @bind:after="AtualizarBuscaCliente" @onfocus="() => _mostrarResultadosCliente = true" />
+                @if (_clienteSelecionado != null)
+                {
+                    <div class="pdv-cliente-chip">
+                        @_clienteSelecionado.Nome
+                        <button type="button" class="btn-icon" @onclick="() => { _clienteSelecionado = null; _buscaCliente = string.Empty; }">✕</button>
+                    </div>
+                }
+                else if (_mostrarResultadosCliente && _buscaCliente.Length >= 2)
+                {
+                    <div class="pdv-dropdown">
+                        @foreach (var c in _resultadosCliente)
+                        {
+                            <button type="button" class="pdv-dropdown-item" @onclick="() => SelecionarCliente(c)">@c.Nome — @c.Telefone</button>
+                        }
+                        @if (_resultadosCliente.Count == 0)
+                        {
+                            <div class="pdv-dropdown-empty">Nenhum cliente encontrado.</div>
+                        }
+                    </div>
+                }
+            </div>
+
+            <div class="pdv-itens-header">
+                <strong>Itens da Venda</strong>
+            </div>
+
+            <table class="data-table">
+                <thead>
+                    <tr><th>Produto</th><th>Qtd.</th><th>Unitário</th><th>Total</th><th></th></tr>
+                </thead>
+                <tbody>
+                    @foreach (var item in _itens)
+                    {
+                        <tr>
+                            <td>@item.Nome</td>
+                            <td>
+                                <div class="pdv-stepper">
+                                    <button type="button" class="btn-icon" @onclick="() => AlterarQuantidade(item, -1)">−</button>
+                                    <span>@item.Quantidade</span>
+                                    <button type="button" class="btn-icon" @onclick="() => AlterarQuantidade(item, 1)">+</button>
+                                </div>
+                            </td>
+                            <td>@item.ValorUnitario.ToString("C", _ptBr)</td>
+                            <td class="valor">@item.Total.ToString("C", _ptBr)</td>
+                            <td><button type="button" class="btn-icon" @onclick="() => RemoverItem(item)">🗑</button></td>
+                        </tr>
+                    }
+                    @if (_itens.Count == 0)
+                    {
+                        <tr><td colspan="5" style="text-align:center;color:var(--text-muted);padding:24px 0">Nenhum item adicionado ainda.</td></tr>
+                    }
+                </tbody>
+            </table>
+
+            <div class="pdv-acoes-itens">
+                <button type="button" class="btn btn-secondary" @onclick="() => _mostrarBuscaProduto = !_mostrarBuscaProduto">+ Adicionar Produto</button>
+                <button type="button" class="btn pdv-btn-limpar" @onclick="LimparVenda">🗑 Limpar Venda</button>
+            </div>
+
+            @if (_mostrarBuscaProduto)
+            {
+                <div class="form-group" style="margin-top:10px">
+                    <input class="form-control" placeholder="Buscar produto por nome..." @bind="_buscaProduto" @bind:event="oninput" @bind:after="AtualizarBuscaProduto" autofocus />
+                    <div class="pdv-dropdown">
+                        @foreach (var p in _resultadosProduto)
+                        {
+                            <button type="button" class="pdv-dropdown-item" @onclick="() => AdicionarProduto(p)">@p.Nome — @p.PrecoVenda.ToString("C", _ptBr) (estoque: @p.EstoqueAtual)</button>
+                        }
+                        @if (_buscaProduto.Length >= 1 && _resultadosProduto.Count == 0)
+                        {
+                            <div class="pdv-dropdown-empty">Nenhum produto encontrado.</div>
+                        }
+                    </div>
+                </div>
+            }
+
+            <div class="form-group" style="margin-top:16px">
+                <label>Adicionar produto por código de barras</label>
+                <input class="form-control" placeholder="Digite o código e pressione ENTER" @bind="_codigoBarras" @bind:event="oninput" @onkeydown="OnKeyDownCodigoBarras" />
+                @if (_erroCodigoBarras != null)
+                {
+                    <p class="pdv-erro">@_erroCodigoBarras</p>
+                }
+            </div>
+        </div>
+
+        <div class="card pdv-card-resumo">
+            <div class="pdv-resumo-header">
+                <strong>Resumo da Venda</strong>
+            </div>
+            <div class="pdv-resumo-linha">
+                <span>Subtotal</span>
+                <span>@Subtotal.ToString("C", _ptBr)</span>
+            </div>
+            <div class="pdv-resumo-linha">
+                <span>Desconto</span>
+                <span>
+                    @_desconto.ToString("C", _ptBr)
+                    <button type="button" class="link-action" style="border:none;background:none;margin-left:6px" @onclick="() => _editandoDesconto = !_editandoDesconto">Editar</button>
+                </span>
+            </div>
+            @if (_editandoDesconto)
+            {
+                <div class="form-group">
+                    <input type="number" step="0.01" min="0" class="form-control" @bind="_desconto" @bind:event="oninput" />
+                </div>
+            }
+            <div class="pdv-resumo-total">
+                <span>TOTAL</span>
+                <span>@Total.ToString("C", _ptBr)</span>
+            </div>
+            <button type="button" class="btn btn-primary pdv-btn-finalizar" disabled="@(_itens.Count == 0)" @onclick="IrParaPagamento">Finalizar Venda (F2)</button>
+        </div>
+    </div>
+}
+else if (_estado == EstadoTela.Pagamento)
+{
+    <div class="card pdv-card-pagamento">
+        <button type="button" class="link-action" style="border:none;background:none" @onclick="() => _estado = EstadoTela.Montagem">← Voltar</button>
+        <h2>Pagamento da Venda</h2>
+        <p class="subtitle">Nova venda</p>
+
+        <div class="pdv-total-pagar">
+            <span>Total a pagar</span>
+            <strong>@Total.ToString("C", _ptBr)</strong>
+        </div>
+
+        <div class="form-group">
+            <label>Forma de Pagamento</label>
+            <div class="pdv-formas-pagamento">
+                @foreach (var forma in FormasDisponiveis)
+                {
+                    <button type="button" class="pdv-forma-btn @(_formaPagamento == forma ? "ativo" : "")" @onclick="() => SelecionarForma(forma)">
+                        @NomeForma(forma)
+                    </button>
+                }
+            </div>
+        </div>
+
+        @if (_formaPagamento == FormaPagamento.Dinheiro)
+        {
+            <div class="form-group">
+                <label>Valor recebido</label>
+                <input type="number" step="0.01" min="0" class="form-control" @bind="_valorRecebido" @bind:event="oninput" />
+            </div>
+
+            <div class="pdv-troco @(Troco < 0 ? "negativo" : "")">
+                <span>Troco</span>
+                <strong>@Troco.ToString("C", _ptBr)</strong>
+            </div>
+        }
+
+        @if (_erroConfirmar != null)
+        {
+            <p class="pdv-erro">@_erroConfirmar</p>
+        }
+
+        <button type="button" class="btn btn-primary pdv-btn-finalizar" disabled="@(!PodeConfirmar)" @onclick="ConfirmarPagamento">Confirmar Pagamento (F5)</button>
+    </div>
+}
+else if (_estado == EstadoTela.Finalizada && _vendaFinalizada != null)
+{
+    <div class="card pdv-card-finalizada">
+        <div class="pdv-check">✔</div>
+        <h2>Venda finalizada com sucesso!</h2>
+        <p class="subtitle">Venda #@_vendaFinalizada.Id.ToString("D6")</p>
+
+        <div class="pdv-resumo-linha"><span>Total</span><span>@_vendaFinalizada.Total.ToString("C", _ptBr)</span></div>
+        <div class="pdv-resumo-linha"><span>Pago</span><span>@_vendaFinalizada.ValorRecebido.ToString("C", _ptBr)</span></div>
+        <div class="pdv-resumo-linha"><span>Troco</span><span class="pdv-troco-texto">@_vendaFinalizada.Troco.ToString("C", _ptBr)</span></div>
+        <div class="pdv-resumo-linha"><span>Forma de Pagamento</span><span>@NomeForma(_vendaFinalizada.FormaPagamento)</span></div>
+
+        <div class="pdv-acoes-finalizada">
+            <button type="button" class="btn btn-secondary" @onclick="Imprimir">🖶 Imprimir Recibo (F6)</button>
+            <button type="button" class="btn btn-primary" @onclick="NovaVenda">+ Nova Venda (F2)</button>
+            <button type="button" class="btn btn-secondary" @onclick="Fechar">Fechar</button>
+        </div>
+    </div>
+}
+
+@code {
+    private enum EstadoTela { Montagem, Pagamento, Finalizada }
+    private EstadoTela _estado = EstadoTela.Montagem;
+    private readonly System.Globalization.CultureInfo _ptBr = new("pt-BR");
+    private static readonly FormaPagamento[] FormasDisponiveis = [FormaPagamento.Dinheiro, FormaPagamento.Pix, FormaPagamento.CartaoDebito, FormaPagamento.CartaoCredito];
+
+    private bool _carregouSessao;
+    private SessaoCaixa? _sessaoAberta;
+
+    private List<ItemVendaVm> _itens = [];
+
+    private string _buscaCliente = string.Empty;
+    private List<Cliente> _resultadosCliente = [];
+    private Cliente? _clienteSelecionado;
+    private bool _mostrarResultadosCliente;
+
+    private bool _mostrarBuscaProduto;
+    private string _buscaProduto = string.Empty;
+    private List<Produto> _resultadosProduto = [];
+
+    private string _codigoBarras = string.Empty;
+    private string? _erroCodigoBarras;
+
+    private decimal _desconto;
+    private bool _editandoDesconto;
+
+    private FormaPagamento _formaPagamento = FormaPagamento.Dinheiro;
+    private decimal _valorRecebido;
+    private string? _erroConfirmar;
+
+    private Venda? _vendaFinalizada;
+
+    private IJSObjectReference? _module;
+    private IJSObjectReference? _atalhosHandle;
+    private DotNetObjectReference<Index>? _dotNetRef;
+
+    private decimal Subtotal => _itens.Sum(i => i.Total);
+    private decimal Total => Math.Max(0, Subtotal - _desconto);
+    private decimal Troco => _formaPagamento == FormaPagamento.Dinheiro ? _valorRecebido - Total : 0m;
+    private bool PodeConfirmar => _formaPagamento != FormaPagamento.Dinheiro || _valorRecebido >= Total;
+
+    protected override async Task OnInitializedAsync()
+    {
+        _sessaoAberta = await Caixa.ObterSessaoAbertaAsync();
+        _carregouSessao = true;
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+        {
+            _module = await JS.InvokeAsync<IJSObjectReference>("import", "./Components/Pages/Pdv/Index.razor.js");
+            _dotNetRef = DotNetObjectReference.Create(this);
+            _atalhosHandle = await _module.InvokeAsync<IJSObjectReference>("registrarAtalhos", _dotNetRef);
+        }
+    }
+
+    // BUG EVITADO: OnParametersSetAsync só reexecuta quando o componente recebe novos parâmetros
+    // de um pai (rota), não quando um campo local muda via @bind — usar @bind:after (como aqui e
+    // em AtualizarBuscaProduto) é o jeito correto de reagir a cada digitação.
+    private async Task AtualizarBuscaCliente()
+    {
+        _resultadosCliente = _buscaCliente.Length >= 2
+            ? await Vendas.BuscarClientesAsync(_buscaCliente)
+            : [];
+    }
+
+    private async Task AtualizarBuscaProduto()
+    {
+        _resultadosProduto = _buscaProduto.Length >= 1
+            ? await Vendas.BuscarProdutosAsync(_buscaProduto)
+            : [];
+    }
+
+    private void SelecionarCliente(Cliente c)
+    {
+        _clienteSelecionado = c;
+        _mostrarResultadosCliente = false;
+    }
+
+    private void AdicionarProduto(Produto p)
+    {
+        var existente = _itens.FirstOrDefault(i => i.ProdutoId == p.Id);
+        if (existente != null)
+            existente.Quantidade++;
+        else
+            _itens.Add(new ItemVendaVm { ProdutoId = p.Id, Nome = p.Nome, ValorUnitario = p.PrecoVenda, Quantidade = 1 });
+
+        _mostrarBuscaProduto = false;
+        _buscaProduto = string.Empty;
+        _resultadosProduto = [];
+    }
+
+    private void AlterarQuantidade(ItemVendaVm item, int delta)
+    {
+        item.Quantidade += delta;
+        if (item.Quantidade <= 0) _itens.Remove(item);
+    }
+
+    private void RemoverItem(ItemVendaVm item) => _itens.Remove(item);
+
+    private void LimparVenda()
+    {
+        _itens.Clear();
+        _desconto = 0;
+        _clienteSelecionado = null;
+        _buscaCliente = string.Empty;
+    }
+
+    private async Task OnKeyDownCodigoBarras(KeyboardEventArgs e)
+    {
+        if (e.Key != "Enter" || string.IsNullOrWhiteSpace(_codigoBarras)) return;
+        _erroCodigoBarras = null;
+        var produto = await Vendas.BuscarPorCodigoBarrasAsync(_codigoBarras.Trim());
+        if (produto == null)
+        {
+            _erroCodigoBarras = $"Produto não encontrado para o código \"{_codigoBarras}\".";
+        }
+        else
+        {
+            AdicionarProduto(produto);
+        }
+        _codigoBarras = string.Empty;
+    }
+
+    private Task IrParaPagamento()
+    {
+        if (_itens.Count == 0) return Task.CompletedTask;
+        _valorRecebido = Total;
+        _erroConfirmar = null;
+        _estado = EstadoTela.Pagamento;
+        return Task.CompletedTask;
+    }
+
+    private void SelecionarForma(FormaPagamento forma)
+    {
+        _formaPagamento = forma;
+        if (forma != FormaPagamento.Dinheiro) _valorRecebido = Total;
+    }
+
+    private async Task ConfirmarPagamento()
+    {
+        if (!ValidarConfirmacao())
+            return;
+
+        try
+        {
+            var dados = new NovaVenda
+            {
+                ClienteId = _clienteSelecionado?.Id,
+                UsuarioId = Auth.UsuarioAtual.Id,
+                SessaoCaixaId = _sessaoAberta.Id,
+                Desconto = _desconto,
+                FormaPagamento = _formaPagamento,
+                ValorRecebido = _valorRecebido,
+                Itens = _itens.Select(i => new NovoVendaItem
+                {
+                    ProdutoId = i.ProdutoId,
+                    Descricao = i.Nome,
+                    Quantidade = i.Quantidade,
+                    ValorUnitario = i.ValorUnitario
+                }).ToList()
+            };
+
+            var id = await Vendas.CriarAsync(dados);
+            _vendaFinalizada = await Vendas.ObterAsync(id);
+            _estado = EstadoTela.Finalizada;
+        }
+        catch (InvalidOperationException ex)
+        {
+            _erroConfirmar = ex.Message;
+             
+            _sessaoAberta = await Caixa.ObterSessaoAbertaAsync();
+        }
+    }
+
+    private bool ValidarConfirmacao()
+    {
+        var regras = new List<(Func<bool> Condicao, string Mensagem)>
+            {
+                (() => !PodeConfirmar,
+                    $"Valor recebido ({_valorRecebido.ToString("C", _ptBr)}) é menor que o total da venda ({Total.ToString("C", _ptBr)})."),
+
+                (() => Auth.UsuarioAtual == null,
+                    "Sessão de usuário expirada. Faça login novamente para confirmar a venda."),
+
+                (() => _sessaoAberta == null,
+                    "Não há sessão de caixa aberta. Abra o caixa antes de confirmar a venda.")
+            };
+
+        foreach (var (condicao, mensagem) in regras)
+        {
+            if (condicao())
+            {
+                _erroConfirmar = mensagem;
+                return false;
+            }
+        }
+
+        _erroConfirmar = null;
+        return true;
+    }
+
+    private async Task Imprimir()
+    {
+        if (_module != null) await _module.InvokeVoidAsync("imprimir");
+    }
+
+    private void NovaVenda()
+    {
+        _itens = [];
+        _desconto = 0;
+        _clienteSelecionado = null;
+        _buscaCliente = string.Empty;
+        _formaPagamento = FormaPagamento.Dinheiro;
+        _valorRecebido = 0;
+        _vendaFinalizada = null;
+        _erroConfirmar = null;
+        _estado = EstadoTela.Montagem;
+    }
+
+    private void Fechar() => NovaVenda();
+
+    private static string NomeForma(FormaPagamento f) => f switch
+    {
+        FormaPagamento.Dinheiro => "Dinheiro",
+        FormaPagamento.Pix => "Pix",
+        FormaPagamento.CartaoDebito => "Cartão Débito",
+        FormaPagamento.CartaoCredito => "Cartão Crédito",
+        _ => f.ToString()
+    };
+
+    [JSInvokable]
+    public async Task OnAtalho(string tecla)
+    {
+        switch (tecla)
+        {
+            case "F2":
+                if (_estado == EstadoTela.Montagem) await IrParaPagamento();
+                else if (_estado == EstadoTela.Finalizada) NovaVenda();
+                break;
+            case "F5":
+                if (_estado == EstadoTela.Pagamento) await ConfirmarPagamento();
+                break;
+            case "F6":
+                if (_estado == EstadoTela.Finalizada) await Imprimir();
+                break;
+        }
+        StateHasChanged();
+    }
+
+    public async ValueTask DisposeAsync()
+    {
+        try
+        {
+            if (_atalhosHandle != null) await _atalhosHandle.InvokeVoidAsync("dispose");
+            if (_module != null) await _module.DisposeAsync();
+        }
+        catch (Microsoft.JSInterop.JSDisconnectedException)
+        {
+            // Circuito já encerrado (usuário navegou/fechou a aba) — nada a limpar do lado do cliente.
+        }
+        _dotNetRef?.Dispose();
+    }
+
+    private class ItemVendaVm
+    {
+        public int ProdutoId { get; set; }
+        public string Nome { get; set; } = string.Empty;
+        public int Quantidade { get; set; }
+        public decimal ValorUnitario { get; set; }
+        public decimal Total => Quantidade * ValorUnitario;
+    }
+}

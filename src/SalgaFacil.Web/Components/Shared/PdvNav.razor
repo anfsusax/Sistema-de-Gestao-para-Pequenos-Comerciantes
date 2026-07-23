@@ -1,0 +1,10 @@
+<div class="pdv-tabs">
+    <a href="/pdv" class="pdv-tab @(Atual == Aba.Venda ? "ativo" : "")">Nova Venda</a>
+    <a href="/pdv/historico" class="pdv-tab @(Atual == Aba.Historico ? "ativo" : "")">Histórico</a>
+    <a href="/pdv/caixa" class="pdv-tab @(Atual == Aba.Caixa ? "ativo" : "")">Caixa</a>
+</div>
+
+@code {
+    public enum Aba { Venda, Historico, Caixa }
+    [Parameter] public Aba Atual { get; set; }
+}
