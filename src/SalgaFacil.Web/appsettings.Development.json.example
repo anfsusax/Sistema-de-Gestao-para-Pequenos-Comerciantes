@@ -5,8 +5,7 @@
       "Microsoft.AspNetCore": "Warning"
     }
   },
-  "AllowedHosts": "*",
   "ConnectionStrings": {
-    "DefaultConnection": "Host=localhost;Port=5432;Database=salgadospro;Username=postgres;Password="
+    "DefaultConnection": "Host=localhost;Port=5432;Database=salgadospro;Username=postgres;Password=SUA_SENHA_AQUI"
   }
 }

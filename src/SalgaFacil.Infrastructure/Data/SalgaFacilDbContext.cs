@@ -29,8 +29,7 @@ public class SalgaFacilDbContext : DbContext
             e.Property(p => p.Nome).HasMaxLength(200);
             e.Property(p => p.Categoria).HasMaxLength(100);
             e.Property(p => p.CodigoBarras).HasMaxLength(64);
-            // Índice único parcial: SQLite permite múltiplos NULL em índice único (cada NULL
-            // é distinto), então produtos sem código de barras cadastrado não colidem entre si.
+            // Índice único: PostgreSQL e SQLite permitem múltiplos NULL (cada NULL é distinto).
             e.HasIndex(p => p.CodigoBarras).IsUnique();
         });
 
