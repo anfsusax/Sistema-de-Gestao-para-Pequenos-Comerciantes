@@ -1,0 +1,128 @@
+@namespace SalgaFacil.Web.Components.Shared
+@using SalgaFacil.Web.Contracts.Pagamentos
+@inject IJSRuntime JS
+
+<div class="pix-cliente-card" aria-live="polite">
+    <div class="pix-cliente-header">
+        <h3 class="pix-cliente-title">Pagamento Pix</h3>
+        @if (!Carregando && Pagamento is not null && string.IsNullOrEmpty(Erro))
+        {
+            <StatusPagamentoPixBadge Status="@Pagamento.Status" />
+        }
+    </div>
+
+    @if (Carregando)
+    {
+        <p class="pix-cliente-msg">Carregando dados do Pix...</p>
+    }
+    else if (!string.IsNullOrEmpty(Erro))
+    {
+        <p class="pix-cliente-erro" role="alert">@Erro</p>
+    }
+    else if (Pagamento is null)
+    {
+        <p class="pix-cliente-msg">Pagamento Pix indisponível no momento. Entre em contato com a loja.</p>
+    }
+    else if (!Pagamento.Disponivel)
+    {
+        <p class="pix-cliente-erro" role="status">
+            @(Pagamento.MensagemIndisponibilidade
+                ?? "Pagamento Pix indisponível no momento. Entre em contato com a loja.")
+        </p>
+    }
+    else if (Pagamento.Status == StatusPagamentoPix.Pago)
+    {
+        <div class="pix-cliente-pago">
+            <p class="pix-cliente-valor">@Pagamento.Valor.ToString("C", _ptBr)</p>
+            <p class="pix-cliente-ok">Pagamento confirmado</p>
+            @if (Pagamento.ConfirmadoEm is not null)
+            {
+                <p class="pix-cliente-meta">
+                    Confirmado em @Pagamento.ConfirmadoEm.Value.ToLocalTime().ToString("dd/MM/yyyy HH:mm")
+                </p>
+            }
+        </div>
+    }
+    else
+    {
+        <dl class="pix-cliente-dados">
+            <div>
+                <dt>Valor</dt>
+                <dd class="pix-cliente-valor">@Pagamento.Valor.ToString("C", _ptBr)</dd>
+            </div>
+            <div>
+                <dt>Beneficiário</dt>
+                <dd>@(Pagamento.NomeBeneficiario ?? "—")</dd>
+            </div>
+            <div class="pix-cliente-chave-bloco">
+                <dt>Chave Pix</dt>
+                <dd>
+                    <code class="pix-cliente-chave" id="@_chaveId">@(Pagamento.Chave ?? "—")</code>
+                </dd>
+            </div>
+        </dl>
+
+        <div class="pix-cliente-acoes">
+            <button type="button"
+                    class="btn btn-primary pix-cliente-copiar"
+                    disabled="@(string.IsNullOrWhiteSpace(Pagamento.Chave) || _copiando)"
+                    @onclick="CopiarChaveAsync">
+                @(_copiado ? "Chave copiada" : _copiando ? "Copiando..." : "Copiar chave")
+            </button>
+            <span class="pix-cliente-hint" aria-live="assertive">
+                @if (!string.IsNullOrEmpty(_erroCopia))
+                {
+                    <span class="pix-cliente-erro">@_erroCopia</span>
+                }
+                else if (_copiado)
+                {
+                    <text>Chave copiada. Cole no aplicativo do seu banco.</text>
+                }
+                else
+                {
+                    <text>Pague no app do banco. A loja confirma o recebimento.</text>
+                }
+            </span>
+        </div>
+    }
+
+    @if (Pagamento?.Simulado == true)
+    {
+        <p class="pix-simulado" role="note">Dados simulados (Development)</p>
+    }
+</div>
+
+@code {
+    [Parameter] public PagamentoPixDto? Pagamento { get; set; }
+    [Parameter] public bool Carregando { get; set; }
+    [Parameter] public string? Erro { get; set; }
+
+    private readonly System.Globalization.CultureInfo _ptBr = new("pt-BR");
+    private readonly string _chaveId = $"pix-chave-{Guid.NewGuid():N}";
+    private bool _copiado;
+    private bool _copiando;
+    private string? _erroCopia;
+
+    private async Task CopiarChaveAsync()
+    {
+        if (Pagamento is null || string.IsNullOrWhiteSpace(Pagamento.Chave))
+            return;
+
+        _copiando = true;
+        _copiado = false;
+        _erroCopia = null;
+        try
+        {
+            await JS.InvokeVoidAsync("navigator.clipboard.writeText", Pagamento.Chave);
+            _copiado = true;
+        }
+        catch
+        {
+            _erroCopia = "Não foi possível copiar a chave. Selecione e copie manualmente.";
+        }
+        finally
+        {
+            _copiando = false;
+        }
+    }
+}

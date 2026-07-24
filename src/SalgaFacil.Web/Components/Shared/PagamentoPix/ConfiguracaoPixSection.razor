@@ -1,0 +1,76 @@
+@namespace SalgaFacil.Web.Components.Shared
+@using SalgaFacil.Web.Contracts.Pagamentos
+
+<div class="pix-config-section" aria-live="polite">
+    <div class="pix-config-header">
+        <h3 class="pix-config-title">Pagamento Pix manual</h3>
+        <p class="pix-config-subtitle">Chave e beneficiário exibidos ao cliente nos pedidos Pix.</p>
+    </div>
+
+    @if (Carregando)
+    {
+        <p class="pix-config-msg">Carregando configuração Pix...</p>
+    }
+    else if (Model is null)
+    {
+        <p class="pix-config-erro" role="alert">Não foi possível carregar a configuração Pix.</p>
+    }
+    else
+    {
+        @if (Model.Simulado)
+        {
+            <p class="pix-simulado" role="note">Dados simulados (Development)</p>
+        }
+
+        <EditForm Model="Model" OnValidSubmit="SalvarAsync">
+            <div class="form-group pix-config-switch">
+                <label class="pix-config-check">
+                    <InputCheckbox @bind-Value="Model.Ativo" />
+                    <span>Pix ativo na loja</span>
+                </label>
+            </div>
+
+            <div class="form-group">
+                <label for="pix-chave">Chave Pix</label>
+                <InputText id="pix-chave"
+                           class="form-control"
+                           @bind-Value="Model.Chave"
+                           maxlength="140"
+                           placeholder="CPF, CNPJ, e-mail, telefone ou chave aleatória" />
+            </div>
+
+            <div class="form-group">
+                <label for="pix-beneficiario">Nome do beneficiário</label>
+                <InputText id="pix-beneficiario"
+                           class="form-control"
+                           @bind-Value="Model.NomeBeneficiario"
+                           maxlength="200"
+                           placeholder="Nome que aparece no app do banco" />
+            </div>
+
+            @if (!string.IsNullOrEmpty(Erro))
+            {
+                <p class="pix-config-erro" role="alert">@Erro</p>
+            }
+            @if (!string.IsNullOrEmpty(Mensagem))
+            {
+                <p class="pix-config-ok" role="status">@Mensagem</p>
+            }
+
+            <button type="submit" class="btn btn-primary" disabled="@Salvando">
+                @(Salvando ? "Salvando..." : "Salvar Pix")
+            </button>
+        </EditForm>
+    }
+</div>
+
+@code {
+    [Parameter] public ConfiguracaoPixDto? Model { get; set; }
+    [Parameter] public bool Carregando { get; set; }
+    [Parameter] public bool Salvando { get; set; }
+    [Parameter] public string? Mensagem { get; set; }
+    [Parameter] public string? Erro { get; set; }
+    [Parameter] public EventCallback OnSalvar { get; set; }
+
+    private Task SalvarAsync() => OnSalvar.InvokeAsync();
+}

@@ -1,0 +1,62 @@
+.pix-config-section {
+    margin-top: 16px;
+}
+
+.pix-config-header {
+    margin-bottom: 14px;
+}
+
+.pix-config-title {
+    margin: 0 0 4px;
+    font-size: 16px;
+    font-weight: 700;
+}
+
+.pix-config-subtitle,
+.pix-config-msg {
+    margin: 0;
+    font-size: 13px;
+    color: var(--text-muted);
+}
+
+.pix-config-switch {
+    margin-bottom: 14px;
+}
+
+.pix-config-check {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    font-weight: 600;
+    cursor: pointer;
+}
+
+.pix-config-erro {
+    margin: 0 0 12px;
+    color: #b91c1c;
+    font-size: 13px;
+    font-weight: 600;
+}
+
+.pix-config-ok {
+    margin: 0 0 12px;
+    color: var(--green-text);
+    font-size: 13px;
+    font-weight: 600;
+}
+
+.pix-simulado {
+    margin: 0 0 14px;
+    padding: 6px 10px;
+    border-radius: 8px;
+    background: var(--yellow-light);
+    color: var(--yellow-text);
+    font-size: 12px;
+    font-weight: 600;
+}
+
+@media (max-width: 389px) {
+    .pix-config-title {
+        font-size: 15px;
+    }
+}

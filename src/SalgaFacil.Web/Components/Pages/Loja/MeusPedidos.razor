@@ -2,6 +2,7 @@
 @layout SalgaFacil.Web.Components.Layout.PublicLayout
 @inject LojaPublicaService Loja
 @inject CarrinhoSessao Carrinho
+@inject IPagamentoPixService PagamentoPix
 
 <PageTitle>Meus pedidos — @(_empresa?.NomeFantasia ?? "Loja")</PageTitle>
 
@@ -70,6 +71,14 @@ else
                         </tbody>
                     </table>
                     <p style="text-align:right;font-weight:700;margin-top:10px">Total do pedido: @p.Total.ToString("C", _ptBr)</p>
+
+                    @if (p.FormaPagamento == FormaPagamento.Pix)
+                    {
+                        var estado = ObterEstadoPix(p.Id);
+                        <PagamentoPixClienteCard Pagamento="estado.Pagamento"
+                                                 Carregando="estado.Carregando"
+                                                 Erro="@estado.Erro" />
+                    }
                 </div>
             }
         }
@@ -85,6 +94,7 @@ else
     private bool _buscou;
     private string? _erro;
     private List<Pedido> _pedidos = [];
+    private readonly Dictionary<int, PixClienteEstado> _pixPorPedido = [];
     private readonly System.Globalization.CultureInfo _ptBr = new("pt-BR");
 
     protected override async Task OnInitializedAsync()
@@ -126,7 +136,42 @@ else
         {
             _pedidos = await Loja.ListarPedidosPorTelefoneAsync(_empresa.Id, _telefone);
             _buscou = true;
+            _pixPorPedido.Clear();
+            await CarregarPixDosPedidosAsync();
         }
         finally { _buscando = false; }
+    }
+
+    private async Task CarregarPixDosPedidosAsync()
+    {
+        if (_empresa is null) return;
+
+        foreach (var pedido in _pedidos.Where(p => p.FormaPagamento == FormaPagamento.Pix))
+        {
+            _pixPorPedido[pedido.Id] = new PixClienteEstado { Carregando = true };
+        }
+
+        foreach (var pedido in _pedidos.Where(p => p.FormaPagamento == FormaPagamento.Pix))
+        {
+            try
+            {
+                var pagamento = await PagamentoPix.ObterParaClienteAsync(_empresa.Id, pedido.Id, _telefone);
+                _pixPorPedido[pedido.Id] = new PixClienteEstado { Pagamento = pagamento };
+            }
+            catch (Exception ex)
+            {
+                _pixPorPedido[pedido.Id] = new PixClienteEstado { Erro = ex.Message };
+            }
+        }
+    }
+
+    private PixClienteEstado ObterEstadoPix(int pedidoId) =>
+        _pixPorPedido.TryGetValue(pedidoId, out var estado) ? estado : new PixClienteEstado { Carregando = true };
+
+    private sealed class PixClienteEstado
+    {
+        public PagamentoPixDto? Pagamento { get; init; }
+        public bool Carregando { get; init; }
+        public string? Erro { get; init; }
     }
 }
