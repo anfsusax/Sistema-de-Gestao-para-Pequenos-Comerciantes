@@ -210,7 +210,7 @@ Executar a IA/desenvolvedor no escopo do módulo
       ↓
 Rodar o projeto localmente e testar o módulo
       ↓
-Commit (mensagens claras, escopo do módulo)
+Gestor revisa e cria o commit (mensagem clara, escopo do módulo)
       ↓
 Push da branch (origin/feature/<modulo>)
       ↓
@@ -297,7 +297,7 @@ aplicada neste documento, conforme a missão pediu ("apenas documente").
       principal?
 - [ ] A tarefa da IA/dev deixa claro quais arquivos do módulo ela pode tocar
       livremente e quais são compartilhados (seção 4) — e que mudança em
-      compartilhado exige aviso antes de commitar?
+      compartilhado exige registro no relatório para decisão do gestor?
 - [ ] Se a tarefa envolve migration EF Core: foi confirmado que nenhuma outra
       branch está gerando migration ao mesmo tempo?
 - [ ] Se a tarefa envolve `Program.cs`/DI: o novo registro vai no fim da
@@ -369,8 +369,8 @@ Fluxo:
 2. Registra cada branch, tarefa e relatório em `docs/FRENTES.md`.
 3. Cada executor recebe apenas o comando `executar` e trabalha autonomamente.
 4. Dependências ainda inexistentes usam adapters/fakes compatíveis com o mesmo contrato, nunca formatos inventados.
-5. Cada frente entrega código, validação, relatório exclusivo e commit.
-6. O gestor usa `revisar entregas`, compara as branches e define a integração.
+5. Cada executor entrega código, validações possíveis e relatório exclusivo no working tree, sem stage ou commit.
+6. O gestor usa `revisar entregas`, executa as validações finais, classifica a entrega e cria o commit somente quando aprovada.
 7. Migrations e merges continuam centralizados e autorizados.
 
 Para equipes maiores, criar uma branch e uma tarefa por entrega ou módulo, mantendo propriedade de arquivos sem sobreposição. Não acumular várias entregas simultâneas numa branch genérica de Backend ou Frontend.

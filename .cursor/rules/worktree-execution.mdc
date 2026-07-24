@@ -3,7 +3,7 @@ description: Executa automaticamente a tarefa cadastrada para a branch atual
 alwaysApply: true
 ---
 
-Quando o usuário disser `executar`, leia e siga integralmente `EXECUTAR.md`. Identifique a tarefa em `docs/FRENTES.md` pela branch atual. Execute, valide, preencha o relatório exclusivo e crie o commit sem pedir confirmação genérica.
+Quando o usuário disser `executar`, leia e siga integralmente `EXECUTAR.md`. Identifique a tarefa em `docs/FRENTES.md` pela branch atual. Execute, valide e preencha o relatório exclusivo sem pedir confirmação genérica. Nunca faça stage ou commit; o gestor fará isso após a revisão.
 
 Quando o usuário disser `status`, informe o progresso da tarefa da branch atual.
 

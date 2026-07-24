@@ -62,7 +62,7 @@ Validar Pix inativo, configuração incompleta, telefone correto/incorreto, outr
 
 # RESTRIÇÕES
 
-Não esperar o Frontend. Não fazer merge, push ou migration. Não adicionar pacotes. Criar commit pequeno com o relatório.
+Não esperar o Frontend. Não fazer merge, push ou migration. Não adicionar pacotes. Não executar `git add` nem criar commit; o gestor fará isso após a revisão.
 
 # RESULTADO ESPERADO
 
@@ -89,11 +89,11 @@ A worktree contém a implementação da rodada anterior ainda sem commit. Essas 
 3. Revise o diff completo, incluindo `StatusPagamento.cs` e `PagamentoPixService.cs`, que ainda estão sem rastreamento.
 4. Execute `dotnet restore SalgaFacil.slnx` se necessário e `dotnet build SalgaFacil.slnx --no-restore`.
 5. Atualize o relatório: substitua a limitação antiga de build/Git pelo resultado real desta rodada, registre os ajustes e marque a revisão do diff.
-6. Crie um único commit com toda a implementação e o relatório. Não faça migration, merge, rebase ou push.
+6. Não execute `git add` nem crie commit. Entregue implementação e relatório no working tree para validação do gestor. Não faça migration, merge, rebase ou push.
 
 ### Critério De Nova Entrega
 
-A entrega só retorna para revisão quando os dois ajustes de regra estiverem concluídos, o build estiver sem erros, todos os arquivos da implementação estiverem no commit e a worktree estiver limpa.
+A entrega só retorna para revisão quando os dois ajustes de regra estiverem concluídos, o build estiver sem erros, todos os arquivos da implementação e o relatório estiverem prontos no working tree para o gestor.
 ### Modo Obrigatório Neste Sandbox
 
 O sandbox desta IA já demonstrou que não acessa os metadados Git da pasta irmã e não possui SDK .NET. Isso não é mais um bloqueio nem uma decisão do usuário.
@@ -101,7 +101,7 @@ O sandbox desta IA já demonstrou que não acessa os metadados Git da pasta irm�
 - Não tente baixar ou instalar o SDK novamente.
 - Não peça acesso à pasta pai e não peça que o usuário escolha quem fará o commit.
 - Aplique agora todos os ajustes de código desta rodada e atualize o relatório.
-- Registre `BUILD, DIFF E COMMIT PENDENTES DO GESTOR` apenas como transferência automática de responsabilidade.
+- Registre `BUILD, DIFF E COMMIT PENDENTES DO GESTOR` como transferência automática de responsabilidade, sem tentar preparar stage ou commit.
 - Encerre com `EXECUTOR CONCLUÍDO — AGUARDANDO VALIDAÇÃO DO GESTOR`.
 
 O gestor executará build, revisão do diff e commit localmente assim que receber essa conclusão.
