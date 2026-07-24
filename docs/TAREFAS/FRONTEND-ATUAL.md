@@ -1,4 +1,4 @@
-﻿# TÍTULO
+# TÍTULO
 
 PIX-MANUAL-001 — Componentes visuais do pagamento Pix manual
 
@@ -65,7 +65,7 @@ Seguir os estados e textos de `PIX-MANUAL-001` em `docs/CONTRATOS.md`. Os compon
 - Não alterar `app.css`; usar CSS isolado.
 - Não adicionar pacote ou JavaScript global.
 - Não editar arquivo compartilhado.
-- Criar um commit pequeno e descritivo.
+- Não executar `git add` nem criar commit; o gestor fará isso após a revisão.
 
 # RESULTADO ESPERADO
 

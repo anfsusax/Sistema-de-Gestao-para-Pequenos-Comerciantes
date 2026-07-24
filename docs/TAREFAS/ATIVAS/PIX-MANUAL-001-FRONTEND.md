@@ -58,7 +58,7 @@ Executar com o fake em Development e validar todos os estados, teclado, cópia, 
 
 # RESTRIÇÕES
 
-Não esperar o Backend. Não alterar DI ou criar outro fake. Não fazer merge ou push. Criar commit pequeno com o relatório.
+Não esperar o Backend. Não alterar DI ou criar outro fake. Não fazer merge ou push. Não executar `git add` nem criar commit; o gestor fará isso após a revisão.
 
 # RESULTADO ESPERADO
 

@@ -22,7 +22,7 @@ Pontos positivos:
 
 Ajustes obrigatórios:
 
-1. Criar o commit da entrega. A branch ainda aponta para `00f3e49` e todos os arquivos do backend estão somente no working tree.
+1. Manter a entrega no working tree até os ajustes serem aprovados; o gestor criará o commit após a validação final.
 2. Validar no serviço os limites de 140 caracteres para a chave e 200 para o beneficiário, evitando erro bruto do banco em chamadas fora da tela.
 3. Considerar o Pix disponível apenas quando ativo e com chave e beneficiário preenchidos.
 4. Atualizar o relatório com o build executado pelo gestor e revisar o diff completo, incluindo os dois arquivos novos.
@@ -61,7 +61,7 @@ Ajustes obrigatórios:
 
 ## Ordem Recomendada Após Os Ajustes
 
-1. Aprovar e integrar o Backend já com commit.
+1. Aprovar o Backend e o gestor criar o commit da entrega.
 2. Integrar o Frontend aprovado.
 3. Criar a migration de ligação no worktree Principal.
 4. Executar build, testes de regras e smoke visual ponta a ponta.
@@ -76,7 +76,7 @@ Ajustes obrigatórios:
 ## Pendências E Próximo Passo
 
 - Devolver os apontamentos às duas IAs.
-- Executar novamente `revisar entregas` depois dos novos commits.
+- Executar novamente `revisar entregas` depois que os executores concluírem os ajustes.
 - Nenhum merge foi realizado.
 
 ## Distribuição Dos Ajustes
@@ -85,3 +85,10 @@ Ajustes obrigatórios:
 - Frontend: instruções registradas no commit `e74e6c4`; a worktree está limpa e pronta.
 - Comando para as duas IAs: `executar`.
 - As frentes permanecem independentes e podem trabalhar simultaneamente.
+
+
+## Política De Commits
+
+- Executores entregam código e relatório sem stage ou commit.
+- O gestor cria o commit somente após classificar a entrega como aprovada.
+- O commit de Frontend ce517c, criado antes desta política, será preservado e revisado normalmente.
