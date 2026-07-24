@@ -76,10 +76,6 @@ else
                     <div class="loja-card-body">
                         <span class="loja-card-cat">@(p.Categoria?.Nome)</span>
                         <h2>@p.Nome</h2>
-                        @if (!string.IsNullOrWhiteSpace(p.Descricao))
-                        {
-                            <p>@p.Descricao</p>
-                        }
                         <div class="loja-card-footer">
                             <strong>@p.PrecoVenda.ToString("C", _ptBr)</strong>
                             <button class="btn btn-primary" type="button" @onclick="() => AbrirSeletor(p)">Adicionar</button>
