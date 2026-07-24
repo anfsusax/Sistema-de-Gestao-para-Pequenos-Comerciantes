@@ -30,10 +30,7 @@ builder.Services.AddScoped<CaixaService>();
 builder.Services.AddScoped<DashboardService>();
 builder.Services.AddScoped<CustosService>();
 builder.Services.AddScoped<EmpresaService>();
-if (builder.Environment.IsDevelopment())
-    builder.Services.AddSingleton<IPagamentoPixService, PagamentoPixDesenvolvimentoService>();
-else
-    builder.Services.AddScoped<IPagamentoPixService, PagamentoPixIndisponivelService>();
+builder.Services.AddScoped<IPagamentoPixService, PagamentoPixService>();
 
 var app = builder.Build();
 
