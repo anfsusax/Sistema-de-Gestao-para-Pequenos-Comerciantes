@@ -158,9 +158,12 @@ else
                 var pagamento = await PagamentoPix.ObterParaClienteAsync(_empresa.Id, pedido.Id, _telefone);
                 _pixPorPedido[pedido.Id] = new PixClienteEstado { Pagamento = pagamento };
             }
-            catch (Exception ex)
+            catch (Exception)
             {
-                _pixPorPedido[pedido.Id] = new PixClienteEstado { Erro = ex.Message };
+                _pixPorPedido[pedido.Id] = new PixClienteEstado
+                {
+                    Erro = "Não foi possível carregar o pagamento. Tente novamente."
+                };
             }
         }
     }
