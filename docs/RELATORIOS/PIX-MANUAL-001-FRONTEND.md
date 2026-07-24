@@ -1,69 +1,68 @@
 # Relatório PIX-MANUAL-001 — Frontend
 
-- Situação: ENTREGUE
+- Situação: ENTREGUE (rodada de ajustes)
 - Branch: `feature/pix-manual-frontend`
-- Base: `00f3e49` (chore: prepara execucao paralela por contrato)
+- Base inicial: `00f3e49`
+- Entrega anterior: `2f52a98`
+- Pedido de ajustes: `e74e6c4`
 - Data: 2026-07-24
 
 ## Resumo
 
-Experiência Pix manual integrada nas três páginas previstas, consumindo `IPagamentoPixService` e o fake de Development já registrado. Componentes reutilizáveis em `Components/Shared/PagamentoPix/` com CSS isolado. Cliente consulta valor/beneficiário/chave e copia; nunca confirma. Comerciante confirma recebimento na tela administrativa, com suporte a confirmação idempotente. Banner explícito quando `Simulado` é verdadeiro.
+Rodada de ajustes do gestor aplicada sobre a integração Pix manual:
 
-## Arquivos Alterados
+1. Em `MeusPedidos`, falhas da consulta Pix pública passam a exibir somente a mensagem genérica `Não foi possível carregar o pagamento. Tente novamente.` — sem `Exception.Message`.
+2. Em `ConfirmacaoPagamentoPixCard`, estado `Pago` mostra confirmação e data, sem ação `Confirmar novamente`. Idempotência permanece no serviço.
 
-- `src/SalgaFacil.Web/Components/Shared/PagamentoPix/StatusPagamentoPixBadge.razor` (+ `.razor.css`)
-- `src/SalgaFacil.Web/Components/Shared/PagamentoPix/PagamentoPixClienteCard.razor` (+ `.razor.css`)
-- `src/SalgaFacil.Web/Components/Shared/PagamentoPix/ConfirmacaoPagamentoPixCard.razor` (+ `.razor.css`)
-- `src/SalgaFacil.Web/Components/Shared/PagamentoPix/ConfiguracaoPixSection.razor` (+ `.razor.css`)
-- `src/SalgaFacil.Web/Components/Pages/Configuracoes/Index.razor`
+## Arquivos Alterados Nesta Rodada
+
 - `src/SalgaFacil.Web/Components/Pages/Loja/MeusPedidos.razor`
-- `src/SalgaFacil.Web/Components/Pages/Pedidos/Detalhe.razor` (+ `Detalhe.razor.css`)
+- `src/SalgaFacil.Web/Components/Shared/PagamentoPix/ConfirmacaoPagamentoPixCard.razor`
+- `src/SalgaFacil.Web/Components/Pages/Pedidos/Detalhe.razor` (remove `ConfirmacaoRepetida`)
 - `docs/RELATORIOS/PIX-MANUAL-001-FRONTEND.md` (este relatório)
 
-## Estados E Breakpoints Validados
+Arquivos da entrega anterior (ainda na branch): componentes em `Components/Shared/PagamentoPix/`, `Configuracoes/Index.razor`, `Detalhe.razor.css`.
 
-Estados cobertos na UI:
+## Estados E Breakpoints
 
-- carregando
-- indisponível (mensagem do contrato)
-- aguardando pagamento
-- chave copiada (`aria-live`)
-- pago com data de confirmação
-- erro (carga, save, cópia, confirmação)
-- confirmação repetida (idempotente) no admin
+Estados representados no markup/CSS:
 
-Breakpoints tratados via CSS isolado: 390 px, 768 px e 1366 px (grid do detalhe, ações do cliente e tipografia da configuração).
+- carregando, indisponível, aguardando, copiado, pago, erro
 
-Validação runtime completa no navegador com fake não foi executada nesta sessão (sem smoke E2E automatizado no repositório); build e revisão estática dos estados/bindings foram feitos.
+Breakpoints no CSS isolado (revisão estática do código):
+
+- `390` / `max-width: 389px` — tipografia/padding
+- `768px` — layout em linha / grid admin / detalhe em 2 colunas
+- `1366px` — espaçamento/padding ampliado
+
+### Smoke Visual
+
+Não executado. Evidência objetiva: nesta sessão não há ferramenta de navegador/automação disponível para abrir a app com o fake em Development e validar estados/breakpoints em runtime. Limitação registrada sem afirmar validação visual.
 
 ## Contrato
 
-- Consumidos apenas tipos/métodos de `PagamentoPixContracts.cs`.
-- Nenhuma duplicação de DTO, interface, enum ou mensagem de indisponibilidade inventada.
-- Status de pagamento visualmente separado do status operacional (`StatusBadge` vs `StatusPagamentoPixBadge`).
-- `Program.cs`, fake, Domain, Infrastructure e contrato não alterados.
+- Sem alteração de Backend, DI (`Program.cs`), fake ou `PagamentoPixContracts.cs`.
+- Diff revisado: apenas páginas Frontend, componentes Shared/PagamentoPix e este relatório.
 
 ## Build E Testes
 
-- `dotnet restore SalgaFacil.slnx` (necessário: assets ausentes na worktree)
 - `dotnet build SalgaFacil.slnx --no-restore` → sucesso, **0 erros**
-- Avisos pré-existentes: CS8602 em `Pdv/Index.razor`; NU1903 de dependências
+- Avisos pré-existentes em `Pdv/Index.razor` e NU1903 de dependências
 
 ## Limitações E Riscos
 
-- Cards Pix no cliente/admin só aparecem quando `FormaPagamento == Pix`; validação visual depende de pedido Pix real (ou criado no checkout).
-- Cópia usa `navigator.clipboard` via `IJSRuntime`; falha em contexto sem permissão exibe erro acessível e mantém a chave visível para cópia manual.
-- Fake em Development é singleton em memória: confirmações e config não persistem entre reinícios do processo.
-- Sem projeto de testes automatizados no repositório.
+- Smoke E2E/visual pendente no Principal ou com navegador disponível.
+- Cards Pix só em pedidos com `FormaPagamento == Pix`.
+- Fake em memória não persiste entre reinícios.
 
 ## Pendências De Integração
 
-- Substituir o fake pela implementação Backend real após revisão das duas frentes.
-- Migration de `Empresa`/`Pedido` (Pix) continua fora do escopo desta frente.
-- Smoke E2E no navegador (copiar chave, confirmar, breakpoints) recomendado no Principal após integração.
+- Backend real + migration após revisão das frentes.
+- Smoke visual com fake em Development (estados + breakpoints).
 
 ## Declaração
 
 - [x] Não alterei Backend, DI ou contrato
 - [x] Usei somente o fake fornecido
 - [x] Revisei o diff
+- [x] Ajustes obrigatórios do gestor aplicados

@@ -89,7 +89,6 @@ else
                 <ConfirmacaoPagamentoPixCard Pagamento="_pixPagamento"
                                              Carregando="_pixCarregando"
                                              Confirmando="_pixConfirmando"
-                                             ConfirmacaoRepetida="_pixConfirmacaoRepetida"
                                              Erro="@_pixErro"
                                              OnConfirmar="ConfirmarPixAsync" />
             }
@@ -103,7 +102,6 @@ else
     private PagamentoPixDto? _pixPagamento;
     private bool _pixCarregando;
     private bool _pixConfirmando;
-    private bool _pixConfirmacaoRepetida;
     private string? _pixErro;
     private readonly System.Globalization.CultureInfo _ptBr = new("pt-BR");
 
@@ -147,10 +145,8 @@ else
         _pixErro = null;
         try
         {
-            var jaPago = _pixPagamento?.Status == StatusPagamentoPix.Pago;
             await PagamentoPix.ConfirmarRecebimentoAsync(Id);
             _pixPagamento = await PagamentoPix.ObterParaAdministracaoAsync(Id);
-            _pixConfirmacaoRepetida = jaPago;
         }
         catch (Exception ex)
         {

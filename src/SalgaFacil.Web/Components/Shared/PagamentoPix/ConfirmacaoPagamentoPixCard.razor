@@ -57,35 +57,16 @@
                     <span> em @Pagamento.ConfirmadoEm.Value.ToLocalTime().ToString("dd/MM/yyyy HH:mm")</span>
                 }
             </p>
-            @if (ConfirmacaoRepetida)
-            {
-                <p class="pix-admin-hint" role="status">Confirmação já registrada (idempotente).</p>
-            }
         }
-
-        @if (Pagamento.PodeConfirmar || Pagamento.Status == StatusPagamentoPix.Pago)
+        else if (Pagamento.PodeConfirmar)
         {
             <button type="button"
-                    class="btn @(Pagamento.Status == StatusPagamentoPix.Pago ? "btn-secondary" : "btn-primary") pix-admin-confirmar"
+                    class="btn btn-primary pix-admin-confirmar"
                     disabled="@Confirmando"
                     @onclick="ConfirmarAsync">
-                @if (Confirmando)
-                {
-                    <text>Confirmando...</text>
-                }
-                else if (Pagamento.Status == StatusPagamentoPix.Pago)
-                {
-                    <text>Confirmar novamente</text>
-                }
-                else
-                {
-                    <text>Confirmar recebimento Pix</text>
-                }
+                @(Confirmando ? "Confirmando..." : "Confirmar recebimento Pix")
             </button>
-            @if (Pagamento.Status != StatusPagamentoPix.Pago)
-            {
-                <p class="pix-admin-hint">Confirme somente após verificar o crédito na conta.</p>
-            }
+            <p class="pix-admin-hint">Confirme somente após verificar o crédito na conta.</p>
         }
     }
 
@@ -99,7 +80,6 @@
     [Parameter] public PagamentoPixDto? Pagamento { get; set; }
     [Parameter] public bool Carregando { get; set; }
     [Parameter] public bool Confirmando { get; set; }
-    [Parameter] public bool ConfirmacaoRepetida { get; set; }
     [Parameter] public string? Erro { get; set; }
     [Parameter] public EventCallback OnConfirmar { get; set; }
 
