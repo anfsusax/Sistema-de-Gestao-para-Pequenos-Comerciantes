@@ -42,6 +42,8 @@ public class SalgaFacilDbContext : DbContext
             e.Property(x => x.HorarioFuncionamento).HasMaxLength(300);
             e.Property(x => x.Instagram).HasMaxLength(120);
             e.Property(x => x.Facebook).HasMaxLength(120);
+            e.Property(x => x.PixChave).HasMaxLength(140);
+            e.Property(x => x.PixNomeBeneficiario).HasMaxLength(200);
             e.HasIndex(x => x.Slug).IsUnique();
         });
 

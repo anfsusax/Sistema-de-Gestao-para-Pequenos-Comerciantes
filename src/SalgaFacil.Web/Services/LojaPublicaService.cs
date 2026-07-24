@@ -83,7 +83,10 @@ public class LojaPublicaService(SalgaFacilDbContext db, ClienteService clienteSe
             Entrega = dados.Entrega,
             EnderecoEntrega = dados.EnderecoEntrega,
             Observacoes = dados.Observacoes,
-            FormaPagamento = dados.FormaPagamento
+            FormaPagamento = dados.FormaPagamento,
+            // Pedido Pix novo começa em Aguardando (PIX-MANUAL-001). Demais formas de pagamento
+            // não usam este campo — StatusPagamento fica nulo, como já era antes desta tarefa.
+            StatusPagamento = dados.FormaPagamento == FormaPagamento.Pix ? StatusPagamento.Aguardando : null
         };
 
         foreach (var item in dados.Itens)

@@ -22,5 +22,10 @@ public class Empresa
     public bool Ativo { get; set; } = true;
     public DateTime DataCadastro { get; set; } = DateTime.UtcNow;
 
+    /// <summary>Habilita o recebimento de Pix manual (PIX-MANUAL-001). Padrão inativo.</summary>
+    public bool PixAtivo { get; set; }
+    public string? PixChave { get; set; }
+    public string? PixNomeBeneficiario { get; set; }
+
     public ICollection<Usuario> Usuarios { get; set; } = [];
 }
