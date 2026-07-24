@@ -67,3 +67,20 @@ Frontend real pronto para receber a implementação Backend sem retrabalho de co
 # FORMATO DO RELATÓRIO FINAL
 
 Preencher `docs/RELATORIOS/PIX-MANUAL-001-FRONTEND.md`.
+
+## RODADA DE AJUSTES DO GESTOR — 2026-07-24
+
+Esta seção tem precedência para a retomada da entrega após a primeira revisão.
+
+### Ajustes Obrigatórios
+
+1. Em `Components/Pages/Loja/MeusPedidos.razor`, nunca encaminhe `Exception.Message` para o card público. Em qualquer falha da consulta Pix, use exatamente a mensagem genérica `Não foi possível carregar o pagamento. Tente novamente.` Detalhes técnicos não podem aparecer para o cliente.
+2. Em `ConfirmacaoPagamentoPixCard.razor`, quando o pagamento estiver `Pago`, mantenha o estado confirmado e a data, mas não renderize a ação `Confirmar novamente`. A idempotência continua sendo obrigação do serviço; não deve ser uma ação normal da interface.
+3. Execute o smoke visual com o fake de Development e valide os estados carregando, indisponível, aguardando, copiado, pago, erro e os breakpoints 390, 768 e 1366 px. Se a ferramenta de navegador continuar indisponível, registre a evidência objetiva e a limitação no relatório sem afirmar que validou visualmente.
+4. Execute `dotnet build SalgaFacil.slnx --no-restore` e revise o diff para confirmar que nenhum arquivo de Backend, DI ou contrato foi alterado.
+5. Atualize o relatório com os ajustes, testes realmente executados e limitações restantes.
+6. Crie um novo commit pequeno com código e relatório. Não faça merge, rebase ou push.
+
+### Critério De Nova Entrega
+
+A entrega só retorna para revisão quando os dois ajustes de interface estiverem concluídos, o build estiver sem erros, o relatório estiver atualizado e a worktree estiver limpa.
