@@ -78,3 +78,10 @@ Ajustes obrigatórios:
 - Devolver os apontamentos às duas IAs.
 - Executar novamente `revisar entregas` depois dos novos commits.
 - Nenhum merge foi realizado.
+
+## Distribuição Dos Ajustes
+
+- Backend: instruções registradas no commit `4a2608e`; a IA deve continuar preservando as alterações locais existentes.
+- Frontend: instruções registradas no commit `e74e6c4`; a worktree está limpa e pronta.
+- Comando para as duas IAs: `executar`.
+- As frentes permanecem independentes e podem trabalhar simultaneamente.
