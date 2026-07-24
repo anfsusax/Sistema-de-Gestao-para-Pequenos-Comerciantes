@@ -1,5 +1,6 @@
 using Microsoft.EntityFrameworkCore;
 using SalgaFacil.Domain.Entities;
+using SalgaFacil.Domain.Services;
 using SalgaFacil.Infrastructure.Data;
 
 namespace SalgaFacil.Web.Services;
@@ -61,6 +62,11 @@ public class ClienteService(SalgaFacilDbContext db, IEmpresaContext empresa)
         if (cliente.Enderecos.Count > 0 && principais == 0)
             cliente.Enderecos.First().Principal = true;
 
+        // Fonte única de normalização — mantém TelefoneNormalizado sempre coerente com
+        // Telefone/WhatsApp, independente de onde o cliente foi criado ou editado
+        // (cardápio público ou cadastro administrativo).
+        cliente.TelefoneNormalizado = TelefoneNormalizador.Normalizar(cliente.Telefone) ?? TelefoneNormalizador.Normalizar(cliente.WhatsApp);
+
         if (cliente.Id == 0)
         {
             cliente.EmpresaId = EmpresaId;
@@ -79,6 +85,7 @@ public class ClienteService(SalgaFacilDbContext db, IEmpresaContext empresa)
             existente.Cnpj = cliente.Cnpj;
             existente.Telefone = cliente.Telefone;
             existente.WhatsApp = cliente.WhatsApp;
+            existente.TelefoneNormalizado = cliente.TelefoneNormalizado;
             existente.Email = cliente.Email;
             existente.DataNascimento = cliente.DataNascimento;
             existente.Observacoes = cliente.Observacoes;
@@ -98,6 +105,123 @@ public class ClienteService(SalgaFacilDbContext db, IEmpresaContext empresa)
         }
 
         await db.SaveChangesAsync();
+    }
+
+    /// <summary>
+    /// Busca um cliente existente pelo telefone normalizado (dentro da empresa) ou cria um novo.
+    /// Ponto único de "achar ou criar cliente" usado pelo cadastro via cardápio público — evita
+    /// duplicidade de cliente com o mesmo telefone (ver _ia/DECISOES.md 2026-07-24).
+    /// Recebe <paramref name="empresaId"/> explicitamente (em vez de usar <see cref="EmpresaId"/>)
+    /// porque o cardápio público é anônimo, sem <see cref="IEmpresaContext"/> autenticado.
+    /// Não sobrescreve o nome de um cliente já existente — só usa o cadastro como está.
+    /// </summary>
+    public async Task<(Cliente Cliente, bool JaExistia)> ObterOuCriarPorTelefoneAsync(int empresaId, string nome, string? telefone, string? whatsapp, string? email = null)
+    {
+        if (string.IsNullOrWhiteSpace(nome))
+            throw new InvalidOperationException("Informe seu nome.");
+
+        var telefoneBruto = !string.IsNullOrWhiteSpace(telefone) ? telefone : whatsapp;
+        var normalizado = TelefoneNormalizador.Normalizar(telefoneBruto);
+        if (normalizado is null)
+            throw new InvalidOperationException("Informe um telefone válido.");
+
+        var existente = await BuscarPorTelefoneNormalizadoAsync(empresaId, normalizado);
+        if (existente is not null)
+        {
+            // Mesma regra de não sobrescrever cadastro existente já aplicada ao nome: só
+            // preenche o e-mail se o cliente ainda não tinha um informado. Nunca substitui
+            // um e-mail já cadastrado por um novo digitado num pedido seguinte.
+            if (string.IsNullOrWhiteSpace(existente.Email) && !string.IsNullOrWhiteSpace(email))
+            {
+                existente.Email = email.Trim();
+                existente.AtualizadoEm = DateTime.UtcNow;
+                await db.SaveChangesAsync();
+            }
+            return (existente, true);
+        }
+
+        var cliente = new Cliente
+        {
+            EmpresaId = empresaId,
+            Nome = nome.Trim(),
+            Telefone = telefoneBruto!.Trim(),
+            WhatsApp = whatsapp?.Trim(),
+            Email = string.IsNullOrWhiteSpace(email) ? null : email.Trim(),
+            TelefoneNormalizado = normalizado,
+            Observacoes = "Pedido via cardápio público",
+            Ativo = true,
+            CriadoEm = DateTime.UtcNow
+        };
+        db.Clientes.Add(cliente);
+
+        try
+        {
+            await db.SaveChangesAsync();
+        }
+        catch (DbUpdateException)
+        {
+            // Janela de concorrência: outra requisição pode ter criado o mesmo telefone entre a
+            // consulta acima e este SaveChanges. Só é impossível de fato quando existir a
+            // restrição UNIQUE (EmpresaId, TelefoneNormalizado) no banco — ver RISCOS.md
+            // ("Restrição UNIQUE de telefone pendente de checagem de duplicados"). Com a
+            // restrição em vigor, o INSERT falha aqui e recuperamos o registro do concorrente
+            // em vez de propagar o erro para o usuário.
+            db.Entry(cliente).State = EntityState.Detached;
+            var criadoPelaOutraRequisicao = await db.Clientes
+                .FirstOrDefaultAsync(c => c.EmpresaId == empresaId && c.TelefoneNormalizado == normalizado);
+            if (criadoPelaOutraRequisicao is not null)
+                return (criadoPelaOutraRequisicao, true);
+            throw;
+        }
+
+        return (cliente, false);
+    }
+
+    /// <summary>
+    /// Busca um cliente pelo telefone (aceita qualquer formatação — normaliza internamente).
+    /// Somente leitura em relação ao pedido; nunca cria cliente. Usado por qualquer fluxo
+    /// público que precise identificar o cliente pelo telefone sem criar pedido (ex.:
+    /// "meus pedidos" no cardápio). Reaproveita o mesmo fallback de auto-cura de
+    /// <see cref="ObterOuCriarPorTelefoneAsync"/> — ver ali o porquê.
+    /// </summary>
+    public async Task<Cliente?> BuscarPorTelefoneAsync(int empresaId, string? telefone)
+    {
+        var normalizado = TelefoneNormalizador.Normalizar(telefone);
+        return normalizado is null ? null : await BuscarPorTelefoneNormalizadoAsync(empresaId, normalizado);
+    }
+
+    /// <summary>
+    /// Ponto único de "achar cliente pelo telefone" — usado tanto por
+    /// <see cref="ObterOuCriarPorTelefoneAsync"/> quanto por <see cref="BuscarPorTelefoneAsync"/>.
+    /// Primeiro tenta pelo índice (TelefoneNormalizado). Se não achar, cai no fallback de
+    /// auto-cura: clientes criados antes desta funcionalidade (ou antes da migration ser
+    /// aplicada) ainda têm TelefoneNormalizado nulo, então o filtro por índice não os
+    /// encontra — sem este fallback, cada novo pedido desses clientes antigos criaria um
+    /// cliente duplicado, mesmo com a checagem em vigor. EF Core não traduz
+    /// TelefoneNormalizador.Normalizar para SQL, então os candidatos (só os com
+    /// TelefoneNormalizado nulo — conjunto que só diminui com o tempo) são carregados e
+    /// comparados em memória. Ao achar, persiste o valor normalizado no registro legado,
+    /// então esse custo só existe uma vez por cliente.
+    /// </summary>
+    private async Task<Cliente?> BuscarPorTelefoneNormalizadoAsync(int empresaId, string normalizado)
+    {
+        var existente = await db.Clientes
+            .FirstOrDefaultAsync(c => c.EmpresaId == empresaId && c.TelefoneNormalizado == normalizado);
+        if (existente is not null)
+            return existente;
+
+        var candidatosLegados = await db.Clientes
+            .Where(c => c.EmpresaId == empresaId && c.TelefoneNormalizado == null)
+            .ToListAsync();
+        var existenteLegado = candidatosLegados.FirstOrDefault(c =>
+            (TelefoneNormalizador.Normalizar(c.Telefone) ?? TelefoneNormalizador.Normalizar(c.WhatsApp)) == normalizado);
+        if (existenteLegado is null)
+            return null;
+
+        existenteLegado.TelefoneNormalizado = normalizado;
+        existenteLegado.AtualizadoEm = DateTime.UtcNow;
+        await db.SaveChangesAsync();
+        return existenteLegado;
     }
 
     public async Task AlternarAtivoAsync(int id)

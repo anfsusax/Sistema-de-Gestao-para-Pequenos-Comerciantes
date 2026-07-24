@@ -1,0 +1,132 @@
+@page "/loja/{Slug}/meus-pedidos"
+@layout SalgaFacil.Web.Components.Layout.PublicLayout
+@inject LojaPublicaService Loja
+@inject CarrinhoSessao Carrinho
+
+<PageTitle>Meus pedidos — @(_empresa?.NomeFantasia ?? "Loja")</PageTitle>
+
+@if (_carregandoEmpresa)
+{
+    <p class="loja-loading">Carregando...</p>
+}
+else if (_empresa is null)
+{
+    <div class="loja-empty"><h1>Loja não encontrada</h1><a href="/" class="btn btn-primary">Voltar</a></div>
+}
+else
+{
+    <div class="loja-checkout">
+        <a href="/loja/@Slug" class="btn btn-secondary">← Cardápio</a>
+        <LojaNav Slug="@Slug" />
+        <h1>Meus pedidos</h1>
+        <p class="loja-desc" style="margin-bottom:16px">Informe o telefone usado no pedido para ver o histórico.</p>
+
+        <div class="card" style="margin-bottom:16px">
+            <div style="display:flex;gap:16px;align-items:flex-end;flex-wrap:wrap">
+                <div class="form-group" style="flex:1">
+                    <label>Telefone</label>
+                    <input class="form-control" @bind="_telefone" @bind:event="oninput" placeholder="(11) 99999-9999" @onkeyup="OnKeyUp" />
+                </div>
+                <button class="btn btn-primary" disabled="@_buscando" @onclick="Buscar">@(_buscando ? "Buscando..." : "Buscar")</button>
+            </div>
+            @if (_erro is not null)
+            {
+                <p class="qty-erro">@_erro</p>
+            }
+        </div>
+
+        @if (_buscou && _pedidos.Count == 0)
+        {
+            <p class="loja-empty-msg">Nenhum pedido encontrado para esse telefone.</p>
+        }
+        else if (_pedidos.Count > 0)
+        {
+            @foreach (var p in _pedidos)
+            {
+                <div class="card" style="margin-bottom:16px;padding:16px">
+                    <div class="card-header-row">
+                        <div>
+                            <strong>Pedido #@p.Id</strong>
+                            <span style="color:var(--text-muted);font-size:13px;margin-left:8px">@p.Data.ToLocalTime().ToString("dd/MM/yyyy HH:mm")</span>
+                        </div>
+                        <StatusBadge Status="@p.Status" />
+                    </div>
+                    @if (p.FormaPagamento is not null)
+                    {
+                        <p style="color:var(--text-muted);font-size:13px;margin-top:4px">Pagamento: @p.FormaPagamento.Value.Rotulo()</p>
+                    }
+                    <table class="data-table" style="margin-top:10px">
+                        <thead><tr><th>Item</th><th>Qtd</th><th>Preço</th><th>Total</th></tr></thead>
+                        <tbody>
+                            @foreach (var item in p.Itens)
+                            {
+                                <tr>
+                                    <td>@item.Descricao</td>
+                                    <td>@item.Quantidade</td>
+                                    <td>@item.ValorUnitario.ToString("C", _ptBr)</td>
+                                    <td>@item.Total.ToString("C", _ptBr)</td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                    <p style="text-align:right;font-weight:700;margin-top:10px">Total do pedido: @p.Total.ToString("C", _ptBr)</p>
+                </div>
+            }
+        }
+    </div>
+}
+
+@code {
+    [Parameter] public string Slug { get; set; } = "";
+    private Empresa? _empresa;
+    private bool _carregandoEmpresa = true;
+    private string _telefone = "";
+    private bool _buscando;
+    private bool _buscou;
+    private string? _erro;
+    private List<Pedido> _pedidos = [];
+    private readonly System.Globalization.CultureInfo _ptBr = new("pt-BR");
+
+    protected override async Task OnInitializedAsync()
+    {
+        _empresa = await Loja.ObterEmpresaPorSlugAsync(Slug);
+        _carregandoEmpresa = false;
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        // Só para o contador de itens no LojaNav ficar correto nesta página — JS interop
+        // (localStorage) só funciona depois que o circuito está interativo.
+        if (firstRender && _empresa is not null)
+        {
+            await Carrinho.CarregarAsync(Slug);
+            StateHasChanged();
+        }
+    }
+
+    private async Task OnKeyUp(KeyboardEventArgs e)
+    {
+        if (e.Key == "Enter")
+            await Buscar();
+    }
+
+    private async Task Buscar()
+    {
+        if (_empresa is null) return;
+        _erro = null;
+
+        if (string.IsNullOrWhiteSpace(_telefone))
+        {
+            _erro = "Informe um telefone.";
+            return;
+        }
+
+        _buscando = true;
+        try
+        {
+            _pedidos = await Loja.ListarPedidosPorTelefoneAsync(_empresa.Id, _telefone);
+            _buscou = true;
+        }
+        finally { _buscando = false; }
+    }
+}

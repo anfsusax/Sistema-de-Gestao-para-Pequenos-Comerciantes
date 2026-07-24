@@ -1,0 +1,117 @@
+@page "/clientes/duplicados"
+@inject ClienteManutencaoService Manutencao
+
+<PageTitle>Clientes duplicados — SalgadosPro</PageTitle>
+
+<div class="page-header">
+    <div>
+        <h1>Possíveis clientes duplicados</h1>
+        <p class="subtitle">Agrupados pelo telefone normalizado. Nada é excluído automaticamente.</p>
+    </div>
+    <a href="/clientes" class="btn btn-secondary">← Clientes</a>
+</div>
+
+@if (!string.IsNullOrEmpty(_mensagem))
+{
+    <div class="card" style="margin-bottom:16px;padding:12px 16px;border-left:4px solid var(--terracota)">@_mensagem</div>
+}
+
+<div class="card" style="margin-bottom:16px;padding:16px">
+    <p style="margin-bottom:10px;color:var(--text-muted);font-size:13px">
+        Cadastros feitos antes desta funcionalidade podem ainda não ter o telefone normalizado.
+        Rode o preenchimento abaixo primeiro — é seguro executar mais de uma vez.
+    </p>
+    <button class="btn btn-secondary" disabled="@_normalizando" @onclick="Normalizar">@(_normalizando ? "Normalizando..." : "Normalizar telefones existentes")</button>
+</div>
+
+@if (_carregando)
+{
+    <p>Carregando...</p>
+}
+else if (_grupos.Count == 0)
+{
+    <p class="loja-empty-msg">Nenhum cliente duplicado encontrado.</p>
+}
+else
+{
+    @foreach (var grupo in _grupos)
+    {
+        <div class="card" style="margin-bottom:16px;padding:16px">
+            <h2 style="font-size:15px;margin-bottom:10px">Telefone: @grupo.TelefoneNormalizado</h2>
+            <table class="data-table">
+                <thead>
+                    <tr><th>Principal</th><th>Nome</th><th>Telefone (como digitado)</th><th>Cadastrado em</th><th>Pedidos</th></tr>
+                </thead>
+                <tbody>
+                    @foreach (var c in grupo.Clientes)
+                    {
+                        <tr>
+                            <td>
+                                <input type="radio" name="@("principal-" + grupo.TelefoneNormalizado)"
+                                       checked="@(PrincipalSelecionado(grupo) == c.Id)"
+                                       @onchange="() => _principalSelecionado[grupo.TelefoneNormalizado] = c.Id" />
+                            </td>
+                            <td>@c.Nome</td>
+                            <td>@c.Telefone</td>
+                            <td>@c.CriadoEm.ToString("dd/MM/yyyy")</td>
+                            <td>@c.TotalPedidos</td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+            <p style="font-size:12px;color:var(--text-muted);margin:10px 0">
+                Marque o cliente "principal". Ao consolidar, os demais deste grupo são inativados e seus pedidos/vendas são movidos para o principal — nenhum registro é excluído.
+            </p>
+            <button class="btn btn-primary" disabled="@(PrincipalSelecionado(grupo) == 0)" @onclick="() => ConsolidarGrupo(grupo)">Consolidar grupo</button>
+        </div>
+    }
+}
+
+@code {
+    private List<GrupoDuplicado> _grupos = [];
+    private readonly Dictionary<string, int> _principalSelecionado = new();
+    private bool _carregando = true;
+    private bool _normalizando;
+    private string? _mensagem;
+
+    protected override async Task OnInitializedAsync() => await Carregar();
+
+    private int PrincipalSelecionado(GrupoDuplicado grupo) => _principalSelecionado.GetValueOrDefault(grupo.TelefoneNormalizado);
+
+    private async Task Carregar()
+    {
+        _carregando = true;
+        _grupos = await Manutencao.IdentificarDuplicadosAsync();
+        _carregando = false;
+    }
+
+    private async Task Normalizar()
+    {
+        _normalizando = true;
+        try
+        {
+            var qtd = await Manutencao.NormalizarTelefonesExistentesAsync();
+            _mensagem = $"{qtd} cliente(s) normalizado(s).";
+            await Carregar();
+        }
+        catch (Exception ex) { _mensagem = ex.Message; }
+        finally { _normalizando = false; }
+    }
+
+    private async Task ConsolidarGrupo(GrupoDuplicado grupo)
+    {
+        var principalId = PrincipalSelecionado(grupo);
+        if (principalId == 0) return;
+
+        try
+        {
+            foreach (var c in grupo.Clientes.Where(c => c.Id != principalId))
+                await Manutencao.ConsolidarAsync(principalId, c.Id);
+
+            _mensagem = "Grupo consolidado com sucesso.";
+            _principalSelecionado.Remove(grupo.TelefoneNormalizado);
+            await Carregar();
+        }
+        catch (Exception ex) { _mensagem = ex.Message; }
+    }
+}

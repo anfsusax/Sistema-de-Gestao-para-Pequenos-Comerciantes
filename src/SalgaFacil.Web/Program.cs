@@ -21,6 +21,7 @@ builder.Services.AddScoped<UnidadeMedidaService>();
 builder.Services.AddScoped<ProdutoService>();
 builder.Services.AddScoped<ProdutoImagemService>();
 builder.Services.AddScoped<ClienteService>();
+builder.Services.AddScoped<ClienteManutencaoService>();
 builder.Services.AddScoped<PacoteService>();
 builder.Services.AddScoped<PedidoService>();
 builder.Services.AddScoped<VendaService>();

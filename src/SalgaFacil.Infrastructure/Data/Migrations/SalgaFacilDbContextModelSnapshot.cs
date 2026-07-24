@@ -113,6 +113,10 @@ namespace SalgaFacil.Infrastructure.Data.Migrations
                         .HasMaxLength(30)
                         .HasColumnType("character varying(30)");
 
+                    b.Property<string>("TelefoneNormalizado")
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)");
+
                     b.Property<string>("WhatsApp")
                         .HasMaxLength(30)
                         .HasColumnType("character varying(30)");
@@ -122,6 +126,8 @@ namespace SalgaFacil.Infrastructure.Data.Migrations
                     b.HasIndex("EmpresaId", "Nome");
 
                     b.HasIndex("EmpresaId", "Telefone");
+
+                    b.HasIndex("EmpresaId", "TelefoneNormalizado");
 
                     b.HasIndex("EmpresaId", "WhatsApp");
 
@@ -391,6 +397,9 @@ namespace SalgaFacil.Infrastructure.Data.Migrations
 
                     b.Property<bool>("Entrega")
                         .HasColumnType("boolean");
+
+                    b.Property<int?>("FormaPagamento")
+                        .HasColumnType("integer");
 
                     b.Property<string>("Observacoes")
                         .HasMaxLength(500)

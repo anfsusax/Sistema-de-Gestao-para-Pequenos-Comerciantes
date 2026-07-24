@@ -1,0 +1,196 @@
+@* Modal de seleção de quantidade — reconstrução visual completa em estilo e-commerce
+   premium (2026-07-24). Contrato de parâmetros e regra de cálculo NÃO mudaram
+   (mesmos Produto/OnConfirmar/OnFechar, mesmo PrecificacaoProduto do Domain) —
+   só a interface foi refeita. Ver _ia/DECISOES.md 2026-07-24 para o que do
+   mockup original foi implementado com dado real e o que foi deliberadamente
+   deixado de fora por não existir dado real por trás (preço "de/por", desconto
+   PIX, desconto por faixa de quantidade, avaliações). *@
+
+@if (Produto is not null)
+{
+    <div class="pm-overlay" @onclick="Fechar">
+        <div class="pm-modal" @onclick:stopPropagation="true">
+            <button type="button" class="pm-close" @onclick="Fechar" aria-label="Fechar">✕</button>
+
+            <div class="pm-body">
+                <div class="pm-media">
+                    @if (!string.IsNullOrWhiteSpace(Produto.FotoUrl))
+                    {
+                        <img src="@Produto.FotoUrl" alt="@Produto.Nome" class="pm-media-img" />
+                    }
+                    else
+                    {
+                        <div class="pm-media-img pm-media-img--empty">🥟</div>
+                    }
+                </div>
+
+                <div class="pm-info">
+                    <div class="pm-header">
+                        @if (!string.IsNullOrWhiteSpace(Produto.Categoria?.Nome))
+                        {
+                            <span class="pm-categoria">@Produto.Categoria!.Nome</span>
+                        }
+                        <h2 class="pm-nome">@Produto.Nome</h2>
+                        @if (!string.IsNullOrWhiteSpace(Produto.Descricao))
+                        {
+                            <p class="pm-desc">@Produto.Descricao</p>
+                        }
+                    </div>
+
+                    <div class="pm-preco-area">
+                        <div class="pm-preco-atual">@_precoUnitario.ToString("C", _ptBr)</div>
+                        <div class="pm-preco-unidade">por unidade</div>
+                    </div>
+
+                    <div class="pm-quantidade-area">
+                        <label class="pm-label">Quantidade</label>
+                        <div class="pm-stepper">
+                            <button type="button" class="pm-stepper-btn" @onclick="Decrementar" disabled="@(_quantidade <= PrecificacaoProduto.QuantidadeMinima)" aria-label="Diminuir quantidade">−</button>
+                            <input class="pm-stepper-input" type="text" inputmode="numeric" pattern="\d*"
+                                   value="@_qtdTexto" @oninput="OnDigitar" aria-label="Quantidade" />
+                            <button type="button" class="pm-stepper-btn" @onclick="Incrementar" aria-label="Aumentar quantidade">+</button>
+                        </div>
+                        @if (_erro is not null)
+                        {
+                            <p class="pm-erro">@_erro</p>
+                        }
+                    </div>
+
+                    <div class="pm-quick-area">
+                        <label class="pm-label">Quantidade rápida</label>
+                        <div class="pm-quick-grid">
+                            @foreach (var opcao in QuantidadesRapidas)
+                            {
+                                <button type="button" class="pm-quick-card @(_quantidade == opcao.Quantidade ? "active" : "")" @onclick="() => Definir(opcao.Quantidade)">
+                                    <span class="pm-quick-label">@opcao.Rotulo</span>
+                                    <span class="pm-quick-preco">@PrecificacaoProduto.CalcularTotal(Produto, opcao.Quantidade).ToString("C", _ptBr)</span>
+                                </button>
+                            }
+                        </div>
+                    </div>
+
+                    <div class="pm-resumo-card">
+                        <div class="pm-resumo-row">
+                            <span>Subtotal (@_quantidade un.)</span>
+                            <strong>@_total.ToString("C", _ptBr)</strong>
+                        </div>
+                        <div class="pm-resumo-row pm-resumo-total">
+                            <span>Total</span>
+                            <strong>@_total.ToString("C", _ptBr)</strong>
+                        </div>
+                    </div>
+
+                    <div class="pm-cta-row">
+                        <button type="button" class="pm-favorito @(_favoritoAtivo ? "active" : "")" @onclick="Favoritar" aria-label="Favoritar produto" title="Favoritos (em breve)">
+                            @(_favoritoAtivo ? "❤" : "♡")
+                        </button>
+                        <button type="button" class="pm-cta" @onclick="Confirmar">
+                            🛒 Adicionar ao pedido
+                        </button>
+                    </div>
+                    @if (_favoritoMsg is not null)
+                    {
+                        <p class="pm-favorito-msg">@_favoritoMsg</p>
+                    }
+
+                    <p class="pm-seguro">🔒 Ambiente seguro. Seus dados estão protegidos.</p>
+                </div>
+            </div>
+        </div>
+    </div>
+}
+
+@code {
+    [Parameter] public Produto? Produto { get; set; }
+    [Parameter] public EventCallback<int> OnConfirmar { get; set; }
+    [Parameter] public EventCallback OnFechar { get; set; }
+
+    private int _quantidade = 1;
+    private string _qtdTexto = "1";
+    private string? _erro;
+    private int? _produtoIdAnterior;
+    private readonly System.Globalization.CultureInfo _ptBr = new("pt-BR");
+
+    // Forma de pagamento NÃO é escolhida aqui (removido a pedido do usuário em
+    // 2026-07-24) — a seleção real, com esta mesma aparência de cards, fica
+    // exclusivamente em Loja/Carrinho.razor. Ver _ia/DECISOES.md 2026-07-24.
+    private bool _favoritoAtivo;
+    private string? _favoritoMsg;
+
+    private static readonly (int Quantidade, string Rotulo)[] QuantidadesRapidas =
+    [
+        (1, "1 Unidade"),
+        (10, "10 Unidades"),
+        (50, "50 Salgados"),
+        (100, "1 Cento (100)")
+    ];
+
+    private decimal _precoUnitario => Produto is null ? 0 : PrecificacaoProduto.PrecoUnitario(Produto, _quantidade);
+    private decimal _total => Produto is null ? 0 : PrecificacaoProduto.CalcularTotal(Produto, _quantidade);
+
+    protected override void OnParametersSet()
+    {
+        // Reseta o estado sempre que um produto novo é aberto no modal
+        // (evita "vazar" quantidade/favorito para o produto anterior).
+        if (Produto?.Id != _produtoIdAnterior)
+        {
+            _produtoIdAnterior = Produto?.Id;
+            _quantidade = 1;
+            _qtdTexto = "1";
+            _erro = null;
+            _favoritoAtivo = false;
+            _favoritoMsg = null;
+        }
+    }
+
+    private void Definir(int quantidade)
+    {
+        _quantidade = quantidade;
+        _qtdTexto = quantidade.ToString();
+        _erro = null;
+    }
+
+    private void Incrementar() => Definir(_quantidade + 1);
+
+    private void Decrementar()
+    {
+        if (_quantidade > PrecificacaoProduto.QuantidadeMinima) Definir(_quantidade - 1);
+    }
+
+    private void OnDigitar(ChangeEventArgs e)
+    {
+        var texto = e.Value?.ToString() ?? "";
+        _qtdTexto = texto;
+
+        if (string.IsNullOrWhiteSpace(texto))
+        {
+            _erro = null;
+            return;
+        }
+
+        if (!int.TryParse(texto, out var quantidade) || quantidade < PrecificacaoProduto.QuantidadeMinima)
+        {
+            _erro = "Informe um número inteiro maior que zero.";
+            return;
+        }
+
+        _erro = null;
+        _quantidade = quantidade;
+    }
+
+    private void Favoritar()
+    {
+        // Sem persistência real (não existe lista de favoritos no sistema hoje) —
+        // feedback honesto em vez de fingir uma função que não existe.
+        _favoritoAtivo = !_favoritoAtivo;
+        _favoritoMsg = _favoritoAtivo ? "Favoritos chega em breve por aqui 🙂" : null;
+    }
+
+    private async Task Confirmar()
+    {
+        if (Produto is null || _quantidade < PrecificacaoProduto.QuantidadeMinima) return;
+        await OnConfirmar.InvokeAsync(_quantidade);
+    }
+
+    private async Task Fechar() => await OnFechar.InvokeAsync();
+}

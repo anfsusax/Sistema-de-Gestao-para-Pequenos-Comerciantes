@@ -14,9 +14,14 @@ else
 {
     <div class="loja-checkout">
         <a href="/loja/@Slug" class="btn btn-secondary">← Cardápio</a>
+        <LojaNav Slug="@Slug" />
         <h1>Seu pedido</h1>
 
-        @if (_linhas.Count == 0 && _pedidoId == 0)
+        @if (_carregandoCarrinho)
+        {
+            <p class="loja-loading">Carregando carrinho...</p>
+        }
+        else if (_linhas.Count == 0 && _pedidoId == 0)
         {
             <p class="loja-empty-msg">Carrinho vazio.</p>
         }
@@ -43,14 +48,13 @@ else
                     </tbody>
                 </table>
                 <p style="text-align:right;font-weight:700;margin-top:12px">Total: @_linhas.Sum(l => l.Preco * l.Quantidade).ToString("C", _ptBr)</p>
+                <p style="text-align:right;margin-top:8px">
+                    <button type="button" class="link-action" @onclick="EsvaziarCarrinho">Esvaziar carrinho</button>
+                </p>
             </div>
 
-            <div class="card form-card">
+            <div class="card" style="margin-bottom:16px">
                 <h2 style="font-size:16px;margin-bottom:12px">Seus dados</h2>
-                @if (!string.IsNullOrEmpty(_erro))
-                {
-                    <div class="login-error">@_erro</div>
-                }
                 <div class="form-group">
                     <label>Nome *</label>
                     <InputText class="form-control" @bind-Value="_pedido.Nome" />
@@ -66,6 +70,10 @@ else
                     </div>
                 </div>
                 <div class="form-group">
+                    <label>E-mail <span style="font-weight:400;color:var(--text-muted)">(opcional)</span></label>
+                    <InputText class="form-control" type="email" @bind-Value="_pedido.Email" placeholder="voce@exemplo.com" />
+                </div>
+                <div class="form-group">
                     <label><input type="radio" name="modo" checked="@(!_pedido.Entrega)" @onchange="() => _pedido.Entrega = false" /> Retirada</label>
                     <label style="margin-left:16px"><input type="radio" name="modo" checked="@_pedido.Entrega" @onchange="() => _pedido.Entrega = true" /> Entrega</label>
                 </div>
@@ -76,10 +84,27 @@ else
                         <InputText class="form-control" @bind-Value="_pedido.EnderecoEntrega" />
                     </div>
                 }
-                <div class="form-group">
+                <div class="form-group" style="margin-bottom:0">
                     <label>Observações</label>
                     <InputTextArea class="form-control" @bind-Value="_pedido.Observacoes" rows="2" />
                 </div>
+            </div>
+
+            <div class="card">
+                <h2 style="font-size:16px;margin-bottom:12px">Forma de pagamento</h2>
+                <div class="pm-pagamento-grid" style="margin-bottom:16px">
+                    @foreach (var forma in FormasDisponiveis)
+                    {
+                        <button type="button" class="pm-pagamento-card @(_pedido.FormaPagamento == forma ? "active" : "")" @onclick="() => _pedido.FormaPagamento = forma">
+                            <span class="pm-pagamento-icone">@forma.Icone()</span>
+                            <span>@forma.Rotulo()</span>
+                        </button>
+                    }
+                </div>
+                @if (!string.IsNullOrEmpty(_erro))
+                {
+                    <div class="login-error" style="margin-bottom:16px">@_erro</div>
+                }
                 <button class="btn btn-primary" disabled="@_enviando" @onclick="Enviar">@(_enviando ? "Enviando..." : "Confirmar pedido")</button>
             </div>
         }
@@ -87,8 +112,19 @@ else
         @if (_pedidoId > 0)
         {
             <div class="card" style="margin-top:16px;padding:16px;border-left:4px solid var(--green)">
-                Pedido <strong>#@_pedidoId</strong> enviado com sucesso! Acompanhe pelo WhatsApp da loja.
-                <div style="margin-top:12px"><a class="btn btn-secondary" href="/loja/@Slug">Voltar ao cardápio</a></div>
+                Pedido <strong>#@_pedidoId</strong> enviado com sucesso!
+                @if (_clienteJaExistia)
+                {
+                    <p style="margin-top:8px;color:var(--text-muted);font-size:13px">Encontramos seu cadastro. Seus dados foram utilizados neste pedido.</p>
+                }
+                <div style="margin-top:12px;display:flex;gap:8px;flex-wrap:wrap">
+                    @if (_linkWhatsApp is not null)
+                    {
+                        <a class="btn btn-primary" href="@_linkWhatsApp" target="_blank" rel="noopener">📱 Acompanhar pelo WhatsApp</a>
+                    }
+                    <a class="btn btn-secondary" href="/loja/@Slug">Voltar ao cardápio</a>
+                    <a class="btn btn-secondary" href="/loja/@Slug/meus-pedidos">Ver meus pedidos</a>
+                </div>
             </div>
         }
     </div>
@@ -102,13 +138,28 @@ else
     private string? _erro;
     private bool _enviando;
     private int _pedidoId;
+    private bool _clienteJaExistia;
+    private bool _carregandoCarrinho = true;
+    private string? _linkWhatsApp;
     private readonly System.Globalization.CultureInfo _ptBr = new("pt-BR");
+    private static readonly FormaPagamento[] FormasDisponiveis =
+        [FormaPagamento.Pix, FormaPagamento.Dinheiro, FormaPagamento.CartaoDebito, FormaPagamento.CartaoCredito];
 
     protected override async Task OnInitializedAsync()
     {
         _empresa = await Loja.ObterEmpresaPorSlugAsync(Slug);
-        if (_empresa == null) return;
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (!firstRender || _empresa == null) return;
+
+        // JS interop (localStorage) só funciona depois que o circuito está interativo —
+        // por isso o carrinho é carregado aqui, não em OnInitializedAsync.
+        await Sacola.CarregarAsync(Slug);
         await MontarLinhas();
+        _carregandoCarrinho = false;
+        StateHasChanged();
     }
 
     private async Task MontarLinhas()
@@ -120,7 +171,7 @@ else
             .Select(i =>
             {
                 var p = produtos.FirstOrDefault(x => x.Id == i.ProdutoId);
-                return p == null ? null : new Linha { ProdutoId = p.Id, Nome = p.Nome, Preco = p.PrecoVenda, Quantidade = i.Quantidade };
+                return p == null ? null : new Linha { ProdutoId = p.Id, Nome = p.Nome, Preco = PrecificacaoProduto.PrecoUnitario(p, i.Quantidade), Quantidade = i.Quantidade };
             })
             .Where(l => l != null)
             .Cast<Linha>()
@@ -134,27 +185,58 @@ else
         if (item == null) return;
         item.Quantidade += delta;
         if (item.Quantidade <= 0) itens.Remove(item);
-        Sacola.Definir(Slug, itens);
+        await Sacola.DefinirAsync(Slug, itens);
         await MontarLinhas();
     }
 
     private async Task Remover(int produtoId)
     {
         var itens = Sacola.Obter(Slug).Where(i => i.ProdutoId != produtoId).ToList();
-        Sacola.Definir(Slug, itens);
+        await Sacola.DefinirAsync(Slug, itens);
         await MontarLinhas();
+    }
+
+    private async Task EsvaziarCarrinho()
+    {
+        await Sacola.LimparAsync(Slug);
+        _linhas = [];
+    }
+
+    /// <summary>
+    /// Monta o link "https://wa.me/..." para o cliente falar com a loja sobre o pedido recém-criado.
+    /// Reaproveita TelefoneNormalizador (mesma normalização usada para Cliente) porque o formato
+    /// que o wa.me espera — dígitos puros com DDI — é exatamente o que ele já produz.
+    /// Retorna null se a loja não tiver WhatsApp cadastrado (Empresa.WhatsApp), caso em que o
+    /// botão simplesmente não aparece na tela de confirmação.
+    /// </summary>
+    private static string? MontarLinkWhatsApp(string? whatsappLoja, int pedidoId)
+    {
+        var numero = TelefoneNormalizador.Normalizar(whatsappLoja);
+        if (numero is null) return null;
+
+        var mensagem = Uri.EscapeDataString($"Olá! Acabei de fazer o pedido #{pedidoId:D4}.");
+        return $"https://wa.me/{numero}?text={mensagem}";
     }
 
     private async Task Enviar()
     {
         if (_empresa == null) return;
+        if (_pedido.FormaPagamento is null)
+        {
+            _erro = "Selecione a forma de pagamento.";
+            return;
+        }
+
         _enviando = true;
         _erro = null;
         try
         {
             _pedido.Itens = Sacola.Obter(Slug).ToList();
-            _pedidoId = await Loja.CriarPedidoVisitanteAsync(_empresa.Id, _pedido);
-            Sacola.Limpar(Slug);
+            var resultado = await Loja.CriarPedidoVisitanteAsync(_empresa.Id, _pedido);
+            _pedidoId = resultado.PedidoId;
+            _clienteJaExistia = resultado.ClienteJaExistia;
+            _linkWhatsApp = MontarLinkWhatsApp(_empresa.WhatsApp, resultado.PedidoId);
+            await Sacola.LimparAsync(Slug);
             _linhas = [];
         }
         catch (Exception ex) { _erro = ex.Message; }

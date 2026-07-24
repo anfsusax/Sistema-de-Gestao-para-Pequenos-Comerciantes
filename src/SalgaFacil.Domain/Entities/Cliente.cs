@@ -11,6 +11,14 @@ public class Cliente
     public string? Cnpj { get; set; }
     public string Telefone { get; set; } = string.Empty;
     public string? WhatsApp { get; set; }
+
+    /// <summary>
+    /// Telefone em formato normalizado (somente dígitos, com DDI 55), calculado por
+    /// <see cref="Services.TelefoneNormalizador"/> a partir de <see cref="Telefone"/>/<see cref="WhatsApp"/>.
+    /// Usado como identificador de deduplicação de cliente (ver índice em SalgaFacilDbContext).
+    /// Nullable por compatibilidade com cadastros antigos ainda não migrados.
+    /// </summary>
+    public string? TelefoneNormalizado { get; set; }
     public string? Email { get; set; }
     public DateTime? DataNascimento { get; set; }
     public string? Observacoes { get; set; }

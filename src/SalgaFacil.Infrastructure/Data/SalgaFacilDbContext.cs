@@ -95,6 +95,7 @@ public class SalgaFacilDbContext : DbContext
             e.Property(c => c.Nome).HasMaxLength(200).IsRequired();
             e.Property(c => c.Telefone).HasMaxLength(30);
             e.Property(c => c.WhatsApp).HasMaxLength(30);
+            e.Property(c => c.TelefoneNormalizado).HasMaxLength(20);
             e.Property(c => c.Cpf).HasMaxLength(14);
             e.Property(c => c.Cnpj).HasMaxLength(18);
             e.Property(c => c.Email).HasMaxLength(200);
@@ -102,6 +103,11 @@ public class SalgaFacilDbContext : DbContext
             e.HasIndex(c => new { c.EmpresaId, c.Nome });
             e.HasIndex(c => new { c.EmpresaId, c.Telefone });
             e.HasIndex(c => new { c.EmpresaId, c.WhatsApp });
+            // Índice NÃO único por enquanto — existem cadastros anteriores à normalização que
+            // podem colidir. A restrição UNIQUE (impede duplicidade a nível de banco, inclusive
+            // sob concorrência) é o passo seguinte, condicionado à checagem/consolidação de
+            // duplicados reais no banco do usuário. Ver _ia/RISCOS.md e _ia/DECISOES.md 2026-07-24.
+            e.HasIndex(c => new { c.EmpresaId, c.TelefoneNormalizado });
             e.HasOne(c => c.Empresa).WithMany().HasForeignKey(c => c.EmpresaId).OnDelete(DeleteBehavior.Restrict);
         });
 

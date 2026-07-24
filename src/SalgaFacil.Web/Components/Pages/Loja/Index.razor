@@ -29,10 +29,7 @@ else
                     <p class="loja-desc">@_empresa.Descricao</p>
                 }
             </div>
-            <div class="loja-header-actions">
-                <a class="btn btn-secondary" href="/loja/@Slug/carrinho">Carrinho (@Carrinho.QuantidadeTotal(Slug))</a>
-                <a class="loja-admin-link" href="/login">Acesso do Comerciante</a>
-            </div>
+            <LojaNav Slug="@Slug" />
         </div>
         <div class="loja-meta">
             @if (!string.IsNullOrWhiteSpace(_empresa.HorarioFuncionamento))
@@ -85,7 +82,7 @@ else
                         }
                         <div class="loja-card-footer">
                             <strong>@p.PrecoVenda.ToString("C", _ptBr)</strong>
-                            <button class="btn btn-primary" type="button" @onclick="() => Adicionar(p)">Adicionar</button>
+                            <button class="btn btn-primary" type="button" @onclick="() => AbrirSeletor(p)">Adicionar</button>
                         </div>
                     </div>
                 </article>
@@ -97,6 +94,8 @@ else
     {
         <div class="loja-toast">@_msg</div>
     }
+
+    <SeletorQuantidade Produto="_produtoSelecionado" OnConfirmar="ConfirmarAdicao" OnFechar="FecharSeletor" />
 }
 
 @code {
@@ -107,6 +106,7 @@ else
     private int? _categoriaId;
     private bool _carregando = true;
     private string? _msg;
+    private Produto? _produtoSelecionado;
     private readonly System.Globalization.CultureInfo _ptBr = new("pt-BR");
 
     protected override async Task OnInitializedAsync()
@@ -119,6 +119,16 @@ else
         _carregando = false;
     }
 
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (!firstRender) return;
+
+        // JS interop (localStorage) só funciona depois que o circuito está interativo —
+        // por isso o carrinho é carregado aqui, não em OnInitializedAsync.
+        await Carrinho.CarregarAsync(Slug);
+        StateHasChanged();
+    }
+
     private async Task Filtrar(int? categoriaId)
     {
         _categoriaId = categoriaId;
@@ -126,13 +136,24 @@ else
             _produtos = await Loja.ListarProdutosAsync(_empresa.Id, categoriaId);
     }
 
-    private void Adicionar(Produto p)
+    private void AbrirSeletor(Produto p) => _produtoSelecionado = p;
+
+    private void FecharSeletor() => _produtoSelecionado = null;
+
+    private async Task ConfirmarAdicao(int quantidade)
     {
+        var p = _produtoSelecionado;
+        if (p == null || quantidade < PrecificacaoProduto.QuantidadeMinima) return;
+
+        // Se o produto já está no carrinho, soma à quantidade existente
+        // em vez de criar uma linha duplicada.
         var itens = Carrinho.Obter(Slug);
         var item = itens.FirstOrDefault(c => c.ProdutoId == p.Id);
-        if (item == null) itens.Add(new ItemCarrinhoDto { ProdutoId = p.Id, Quantidade = 1 });
-        else item.Quantidade++;
-        Carrinho.Definir(Slug, itens);
-        _msg = $"{p.Nome} adicionado ao carrinho.";
+        if (item == null) itens.Add(new ItemCarrinhoDto { ProdutoId = p.Id, Quantidade = quantidade });
+        else item.Quantidade += quantidade;
+        await Carrinho.DefinirAsync(Slug, itens);
+
+        _msg = $"{quantidade}x {p.Nome} adicionado ao carrinho.";
+        _produtoSelecionado = null;
     }
 }

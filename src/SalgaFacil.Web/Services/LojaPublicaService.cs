@@ -1,12 +1,13 @@
 using Microsoft.EntityFrameworkCore;
 using SalgaFacil.Domain.Entities;
 using SalgaFacil.Domain.Enums;
+using SalgaFacil.Domain.Services;
 using SalgaFacil.Infrastructure.Data;
 
 namespace SalgaFacil.Web.Services;
 
 /// <summary>Serviços públicos da loja (sem login administrativo).</summary>
-public class LojaPublicaService(SalgaFacilDbContext db)
+public class LojaPublicaService(SalgaFacilDbContext db, ClienteService clienteService)
 {
     public Task<Empresa?> ObterEmpresaPorSlugAsync(string slug) =>
         db.Empresas.FirstOrDefaultAsync(e => e.Slug == slug.Trim().ToLowerInvariant() && e.Ativo);
@@ -26,7 +27,7 @@ public class LojaPublicaService(SalgaFacilDbContext db)
             .OrderBy(p => p.Categoria.Ordem).ThenBy(p => p.Nome)
             .ToListAsync();
 
-    public async Task<int> CriarPedidoVisitanteAsync(int empresaId, PedidoVisitanteDto dados)
+    public async Task<PedidoVisitanteResultado> CriarPedidoVisitanteAsync(int empresaId, PedidoVisitanteDto dados)
     {
         if (string.IsNullOrWhiteSpace(dados.Nome))
             throw new InvalidOperationException("Informe seu nome.");
@@ -34,6 +35,14 @@ public class LojaPublicaService(SalgaFacilDbContext db)
             throw new InvalidOperationException("Informe telefone ou WhatsApp.");
         if (dados.Itens.Count == 0)
             throw new InvalidOperationException("Carrinho vazio.");
+        if (dados.Itens.Any(i => i.Quantidade < PrecificacaoProduto.QuantidadeMinima))
+            throw new InvalidOperationException("Quantidade inválida em um ou mais itens do carrinho.");
+        if (dados.FormaPagamento is null)
+            throw new InvalidOperationException("Selecione a forma de pagamento.");
+        // E-mail é opcional no checkout público (mesma validação de formato usada no
+        // cadastro administrativo — ClienteService.SalvarAsync), só recusa se preenchido errado.
+        if (!string.IsNullOrWhiteSpace(dados.Email) && !dados.Email.Contains('@'))
+            throw new InvalidOperationException("E-mail inválido.");
 
         var empresa = await db.Empresas.FirstOrDefaultAsync(e => e.Id == empresaId && e.Ativo)
             ?? throw new InvalidOperationException("Loja não encontrada.");
@@ -46,28 +55,24 @@ public class LojaPublicaService(SalgaFacilDbContext db)
         if (produtos.Count != produtoIds.Count)
             throw new InvalidOperationException("Um ou mais produtos não estão disponíveis.");
 
-        var cliente = new Cliente
+        // Ponto único de "achar ou criar cliente" (ClienteService.ObterOuCriarPorTelefoneAsync) —
+        // evita criar um cliente novo a cada pedido quando o telefone já está cadastrado.
+        // Ver _ia/DECISOES.md 2026-07-24.
+        var (cliente, clienteJaExistia) = await clienteService.ObterOuCriarPorTelefoneAsync(
+            empresaId, dados.Nome, dados.Telefone, dados.WhatsApp, dados.Email);
+
+        if (!clienteJaExistia && dados.Entrega && !string.IsNullOrWhiteSpace(dados.EnderecoEntrega))
         {
-            EmpresaId = empresaId,
-            Nome = dados.Nome.Trim(),
-            Telefone = dados.Telefone?.Trim() ?? dados.WhatsApp!.Trim(),
-            WhatsApp = dados.WhatsApp?.Trim() ?? dados.Telefone?.Trim(),
-            Observacoes = "Pedido via cardápio público",
-            Ativo = true,
-            CriadoEm = DateTime.UtcNow
-        };
-        if (dados.Entrega && !string.IsNullOrWhiteSpace(dados.EnderecoEntrega))
-        {
-            cliente.Enderecos.Add(new EnderecoCliente
+            db.EnderecosCliente.Add(new EnderecoCliente
             {
+                ClienteId = cliente.Id,
                 Logradouro = dados.EnderecoEntrega.Trim(),
                 Cidade = "—",
                 Estado = "SP",
                 Principal = true
             });
+            await db.SaveChangesAsync();
         }
-        db.Clientes.Add(cliente);
-        await db.SaveChangesAsync();
 
         var pedido = new Pedido
         {
@@ -77,7 +82,8 @@ public class LojaPublicaService(SalgaFacilDbContext db)
             Status = StatusPedido.Aguardando,
             Entrega = dados.Entrega,
             EnderecoEntrega = dados.EnderecoEntrega,
-            Observacoes = dados.Observacoes
+            Observacoes = dados.Observacoes,
+            FormaPagamento = dados.FormaPagamento
         };
 
         foreach (var item in dados.Itens)
@@ -88,14 +94,36 @@ public class LojaPublicaService(SalgaFacilDbContext db)
                 ProdutoId = produto.Id,
                 Descricao = produto.Nome,
                 Quantidade = item.Quantidade,
-                ValorUnitario = produto.PrecoVenda,
-                Total = item.Quantidade * produto.PrecoVenda
+                ValorUnitario = PrecificacaoProduto.PrecoUnitario(produto, item.Quantidade),
+                Total = PrecificacaoProduto.CalcularTotal(produto, item.Quantidade)
             });
         }
         pedido.Total = pedido.Itens.Sum(i => i.Total);
         db.Pedidos.Add(pedido);
         await db.SaveChangesAsync();
-        return pedido.Id;
+
+        return new PedidoVisitanteResultado { PedidoId = pedido.Id, ClienteJaExistia = clienteJaExistia };
+    }
+
+    /// <summary>
+    /// Lista os pedidos (com itens) do cliente identificado pelo telefone informado, do mais
+    /// recente para o mais antigo. Não há login no cardápio público — o telefone é o único
+    /// identificador, por isso reaproveita <see cref="ClienteService.BuscarPorTelefoneAsync"/>
+    /// (mesma normalização e mesmo fallback de auto-cura usados no checkout). Retorna lista
+    /// vazia se o telefone não corresponder a nenhum cliente — nunca lança erro nesse caso,
+    /// para não expor se um telefone está ou não cadastrado.
+    /// </summary>
+    public async Task<List<Pedido>> ListarPedidosPorTelefoneAsync(int empresaId, string? telefone)
+    {
+        var cliente = await clienteService.BuscarPorTelefoneAsync(empresaId, telefone);
+        if (cliente is null)
+            return [];
+
+        return await db.Pedidos
+            .Include(p => p.Itens)
+            .Where(p => p.ClienteId == cliente.Id && p.EmpresaId == empresaId)
+            .OrderByDescending(p => p.Data)
+            .ToListAsync();
     }
 }
 
@@ -104,9 +132,11 @@ public class PedidoVisitanteDto
     public string Nome { get; set; } = string.Empty;
     public string? Telefone { get; set; }
     public string? WhatsApp { get; set; }
+    public string? Email { get; set; }
     public bool Entrega { get; set; }
     public string? EnderecoEntrega { get; set; }
     public string? Observacoes { get; set; }
+    public FormaPagamento? FormaPagamento { get; set; }
     public List<ItemCarrinhoDto> Itens { get; set; } = [];
 }
 
@@ -114,4 +144,13 @@ public class ItemCarrinhoDto
 {
     public int ProdutoId { get; set; }
     public int Quantidade { get; set; }
+}
+
+public class PedidoVisitanteResultado
+{
+    public int PedidoId { get; set; }
+
+    /// <summary>True quando o pedido foi vinculado a um cliente já cadastrado (mesmo telefone
+    /// normalizado), em vez de um cliente novo. Usado pela UI para a mensagem amigável.</summary>
+    public bool ClienteJaExistia { get; set; }
 }

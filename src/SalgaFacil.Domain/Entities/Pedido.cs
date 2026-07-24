@@ -17,5 +17,14 @@ public class Pedido
     public string? Observacoes { get; set; }
     public bool Entrega { get; set; }
     public string? EnderecoEntrega { get; set; }
+
+    /// <summary>
+    /// Forma de pagamento escolhida. Nullable: pedidos criados pelo painel administrativo
+    /// (encomenda por telefone/balcão) podem não ter esse dado; o checkout do cardápio
+    /// público EXIGE o preenchimento (validado em LojaPublicaService.CriarPedidoVisitanteAsync,
+    /// não no banco, para não quebrar o fluxo administrativo existente).
+    /// </summary>
+    public FormaPagamento? FormaPagamento { get; set; }
+
     public ICollection<PedidoItem> Itens { get; set; } = [];
 }

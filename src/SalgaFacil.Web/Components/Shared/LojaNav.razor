@@ -1,0 +1,14 @@
+@* Navegação pública do cardápio — mesmos 3 links (Carrinho com contador, Meus pedidos,
+   Acesso do comerciante) em todas as páginas da loja. Extraído de Loja/Index.razor para
+   não duplicar o mesmo bloco em Carrinho.razor e MeusPedidos.razor. *@
+@inject CarrinhoSessao Carrinho
+
+<div class="loja-header-actions">
+    <a class="btn btn-secondary" href="/loja/@Slug/carrinho">Carrinho (@Carrinho.QuantidadeTotal(Slug))</a>
+    <a class="loja-admin-link" href="/loja/@Slug/meus-pedidos">Meus pedidos</a>
+    <a class="loja-admin-link" href="/login">Acesso do Comerciante</a>
+</div>
+
+@code {
+    [Parameter, EditorRequired] public string Slug { get; set; } = "";
+}
