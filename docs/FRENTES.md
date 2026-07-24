@@ -5,7 +5,7 @@ Este é o registro que o comando `executar` usa para localizar automaticamente a
 | Situação | Branch | Worktree | Executor | Tarefa | Contrato | Relatório |
 |---|---|---|---|---|---|---|
 | EM EXECUÇÃO | `feature/pix-manual-backend` | `SalgadosFacil-Backend` | Claude Code | `docs/TAREFAS/ATIVAS/PIX-MANUAL-001-BACKEND.md` | `docs/CONTRATOS/PIX-MANUAL-001.md` | `docs/RELATORIOS/PIX-MANUAL-001-BACKEND.md` |
-| EM EXECUÇÃO | `feature/pix-manual-frontend` | `SalgadosFacil-Frontend` | Cursor | `docs/TAREFAS/ATIVAS/PIX-MANUAL-001-FRONTEND.md` | `docs/CONTRATOS/PIX-MANUAL-001.md` | `docs/RELATORIOS/PIX-MANUAL-001-FRONTEND.md` |
+| APROVADA | `feature/pix-manual-frontend` | `SalgadosFacil-Frontend` | Cursor | `docs/TAREFAS/ATIVAS/PIX-MANUAL-001-FRONTEND.md` | `docs/CONTRATOS/PIX-MANUAL-001.md` | `docs/RELATORIOS/PIX-MANUAL-001-FRONTEND.md` |
 
 ## Situações Permitidas
 
