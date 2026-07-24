@@ -1,4 +1,4 @@
-﻿# Decisões Técnicas E De Governança
+# Decisões Técnicas E De Governança
 
 ## 2026-07-24 — Preservar A Arquitetura Atual
 
@@ -39,3 +39,11 @@
 **Decisão:** a próxima entrega é a validação ponta a ponta do fluxo principal.
 
 **Impacto:** página de detalhes, carrinho flutuante, pacotes e outras melhorias ficam depois do baseline, salvo correção necessária para concluir o fluxo.
+
+## 2026-07-24 — Primeiro Pagamento Será Pix Manual
+
+**Contexto:** Meus pedidos exibe a forma escolhida, mas não permite ao cliente efetuar o pagamento. Não existe provedor ou infraestrutura de cobrança.
+
+**Decisão:** o primeiro corte exibirá chave Pix e beneficiário configurados por empresa. O cliente paga no aplicativo bancário e somente o comerciante autenticado confirma o recebimento.
+
+**Impacto:** não haverá gateway, webhook, credenciais bancárias, cartão, confirmação automática ou upload de comprovante nesta entrega. A migration continua reservada ao ambiente Principal após revisão do Backend.

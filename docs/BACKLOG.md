@@ -1,4 +1,4 @@
-﻿# Backlog Do MVP
+# Backlog Do MVP
 
 Atualizado em: 2026-07-24
 
@@ -16,6 +16,7 @@ Atualizado em: 2026-07-24
 | MVP-010 | P1 | Implementar ícone flutuante do carrinho | MVP-001 validado | Frontend | Pendente |
 | MVP-011 | P2 | Criar tela de pacotes de venda | Validar serviço existente e contrato | Frontend | Pendente |
 | MVP-012 | P2 | Decidir convenção de line endings e `.gitattributes` | Revisão dos impactos no repositório | Principal | Pendente |
+| MVP-013 | P0 | Implementar pagamento Pix manual em Meus pedidos | Backend → revisão → migration autorizada → Frontend | Backend + Principal + Frontend | Backend liberado |
 
 ## Regras De Priorização
 

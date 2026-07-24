@@ -1,4 +1,4 @@
-﻿# Plano E Registro De Integração
+# Plano E Registro De Integração
 
 Atualizado em: 2026-07-24
 
@@ -38,3 +38,17 @@ Atualizado em: 2026-07-24
 ## Conflitos E Resultados
 
 Nenhuma integração foi executada nesta primeira entrega.
+
+## Entrega PIX-MANUAL-001
+
+Ordem obrigatória:
+
+1. Claude Code implementa Backend sem migration.
+2. Principal revisa contrato, diff, build e relatório.
+3. Backend é integrado somente após aprovação.
+4. Principal gera e revisa a migration, mediante autorização específica.
+5. Frontend é sincronizado com a nova base.
+6. Cursor implementa as três telas sem alterar Backend.
+7. Principal integra Frontend e executa smoke test ponta a ponta.
+
+O Frontend permanece bloqueado até a conclusão dos passos 1 a 5.
