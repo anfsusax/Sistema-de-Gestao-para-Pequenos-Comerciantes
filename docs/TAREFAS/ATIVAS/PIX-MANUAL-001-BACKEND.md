@@ -62,7 +62,7 @@ Validar Pix inativo, configuração incompleta, telefone correto/incorreto, outr
 
 # RESTRIÇÕES
 
-Não esperar o Frontend. Não fazer merge, push ou migration. Não adicionar pacotes. Criar commit pequeno com o relatório.
+Não esperar o Frontend. Não fazer merge, push ou migration. Não adicionar pacotes. Não executar `git add` nem criar commit; o gestor fará isso após a revisão.
 
 # RESULTADO ESPERADO
 

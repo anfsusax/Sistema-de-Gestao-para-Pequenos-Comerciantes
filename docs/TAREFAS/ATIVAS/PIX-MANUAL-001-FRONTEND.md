@@ -58,7 +58,7 @@ Executar com o fake em Development e validar todos os estados, teclado, cópia, 
 
 # RESTRIÇÕES
 
-Não esperar o Backend. Não alterar DI ou criar outro fake. Não fazer merge ou push. Criar commit pequeno com o relatório.
+Não esperar o Backend. Não alterar DI ou criar outro fake. Não fazer merge ou push. Não executar `git add` nem criar commit; o gestor fará isso após a revisão.
 
 # RESULTADO ESPERADO
 
@@ -79,8 +79,8 @@ Esta seção tem precedência para a retomada da entrega após a primeira revis�
 3. Execute o smoke visual com o fake de Development e valide os estados carregando, indisponível, aguardando, copiado, pago, erro e os breakpoints 390, 768 e 1366 px. Se a ferramenta de navegador continuar indisponível, registre a evidência objetiva e a limitação no relatório sem afirmar que validou visualmente.
 4. Execute `dotnet build SalgaFacil.slnx --no-restore` e revise o diff para confirmar que nenhum arquivo de Backend, DI ou contrato foi alterado.
 5. Atualize o relatório com os ajustes, testes realmente executados e limitações restantes.
-6. Crie um novo commit pequeno com código e relatório. Não faça merge, rebase ou push.
+6. Não execute `git add` nem crie commit. Entregue código e relatório no working tree para validação do gestor. Não faça merge, rebase ou push.
 
 ### Critério De Nova Entrega
 
-A entrega só retorna para revisão quando os dois ajustes de interface estiverem concluídos, o build estiver sem erros, o relatório estiver atualizado e a worktree estiver limpa.
+A entrega só retorna para revisão quando os dois ajustes de interface estiverem concluídos, o build estiver sem erros, o relatório estiver atualizado e os arquivos estiverem prontos no working tree para o gestor.

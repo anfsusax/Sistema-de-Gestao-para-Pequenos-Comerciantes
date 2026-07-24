@@ -1,4 +1,4 @@
-﻿# TÍTULO
+# TÍTULO
 
 PIX-MANUAL-001 — Regras e persistência do pagamento Pix manual
 
@@ -79,7 +79,7 @@ Implementar exatamente `PIX-MANUAL-001` em `docs/CONTRATOS.md`.
 - Não mudar arquitetura.
 - Não executar refatoração ampla.
 - Não tocar em arquivo compartilhado além do DbContext autorizado.
-- Criar um commit pequeno e descritivo.
+- Não executar `git add` nem criar commit; o gestor fará isso após a revisão.
 
 # RESULTADO ESPERADO
 
