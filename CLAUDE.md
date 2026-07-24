@@ -1,19 +1,11 @@
-﻿# Instruções Para A IA — Sistema de Gestão para Pequenos Comerciantes
+# Instruções Para A IA — SalgadosFácil
 
-Este projeto usa a CENTRAL-ROBO para manter contexto entre sessões.
+## Comandos Operacionais
 
-Todo o contexto fica na pasta `_ia/`.
+- `executar` → leia `EXECUTAR.md`, identifique a tarefa pela branch atual e execute até relatório e commit, sem pedir confirmação genérica.
+- `status` → informe o estado da tarefa cadastrada para a branch atual em `docs/FRENTES.md`.
+- `revisar entregas` → no Principal, leia `REVISAR.md` e revise as frentes sem integrar automaticamente.
+- `iniciar` → leia `INICIAR.md` para retomar o contexto histórico da CENTRAL-ROBO.
+- `finalizar` → leia `FINALIZAR.md`.
 
-## Comandos disponíveis
-
-**iniciar** → leia `INICIAR.md` e execute (abre sessão: bootstrap na 1ª vez ou retomada depois)
-
-**finalizar** → leia `FINALIZAR.md` e execute (salva memória para retomar depois)
-
-## Se o usuário não disser nada
-
-Pergunte: "Quer abrir a sessão de trabalho? Diga **iniciar** para retomar ou **finalizar** se for encerrar."
-
-## Regra importante
-
-**iniciar** nunca significa começar o projeto do zero. Significa carregar `_ia/` e continuar.
+O comando `executar` tem prioridade operacional sobre o fluxo de confirmação de `iniciar`: a tarefa já foi preparada e autorizada pelo gestor. Pare apenas para segredo ausente, ação destrutiva, migration não autorizada ou contradição material no contrato.

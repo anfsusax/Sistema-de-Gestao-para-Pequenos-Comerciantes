@@ -1,6 +1,7 @@
 using SalgaFacil.Infrastructure;
 using SalgaFacil.Infrastructure.Data;
 using SalgaFacil.Web.Components;
+using SalgaFacil.Web.Contracts.Pagamentos;
 using SalgaFacil.Web.Services;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -29,6 +30,10 @@ builder.Services.AddScoped<CaixaService>();
 builder.Services.AddScoped<DashboardService>();
 builder.Services.AddScoped<CustosService>();
 builder.Services.AddScoped<EmpresaService>();
+if (builder.Environment.IsDevelopment())
+    builder.Services.AddSingleton<IPagamentoPixService, PagamentoPixDesenvolvimentoService>();
+else
+    builder.Services.AddScoped<IPagamentoPixService, PagamentoPixIndisponivelService>();
 
 var app = builder.Build();
 

@@ -351,3 +351,26 @@ Regras adicionais:
 - A branch Frontend não autoriza mudanças em entidades, persistência ou regras de negócio.
 - O contrato de cada entrega conjunta deve estar registrado em `docs/CONTRATOS.md` antes da execução.
 - A integração continua sendo revisada no ambiente Principal, normalmente na ordem Backend, Frontend, ajustes, testes e documentação.
+
+---
+
+## 14. Modelo Escalável Vigente
+
+A partir de 2026-07-24, as pastas de worktree são ambientes reutilizáveis, mas as branches são curtas e específicas por entrega. Esta seção substitui os nomes fixos de branch da seção 13.
+
+Exemplo atual:
+
+- `SalgadosFacil-Backend` → `feature/pix-manual-backend`
+- `SalgadosFacil-Frontend` → `feature/pix-manual-frontend`
+
+Fluxo:
+
+1. Gestor congela contrato documental e, quando necessário, contrato de código na `main`.
+2. Registra cada branch, tarefa e relatório em `docs/FRENTES.md`.
+3. Cada executor recebe apenas o comando `executar` e trabalha autonomamente.
+4. Dependências ainda inexistentes usam adapters/fakes compatíveis com o mesmo contrato, nunca formatos inventados.
+5. Cada frente entrega código, validação, relatório exclusivo e commit.
+6. O gestor usa `revisar entregas`, compara as branches e define a integração.
+7. Migrations e merges continuam centralizados e autorizados.
+
+Para equipes maiores, criar uma branch e uma tarefa por entrega ou módulo, mantendo propriedade de arquivos sem sobreposição. Não acumular várias entregas simultâneas numa branch genérica de Backend ou Frontend.

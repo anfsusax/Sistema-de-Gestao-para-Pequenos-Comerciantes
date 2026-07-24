@@ -5,49 +5,34 @@ Atualizado em: 2026-07-24
 ## Estado
 
 - Branch principal: `main`
-- Última base diagnosticada: `9f1a61b`
-- Backend pronto para integrar: não
-- Frontend pronto para integrar: não
+- Frentes registradas: `docs/FRENTES.md`
 - Merge autorizado: não
+- Migration autorizada: não
 
-## Ordem Padrão
+## Regra Geral
 
-1. Revisar relatório e commit Backend.
-2. Validar escopo, contrato, build, testes e arquivos compartilhados.
-3. Integrar Backend.
-4. Atualizar Frontend com a `main`.
-5. Revisar relatório e commit Frontend.
-6. Integrar Frontend.
-7. Resolver conflitos no Principal.
-8. Compilar a solução.
-9. Executar smoke tests e baseline ponta a ponta.
-10. Atualizar `ESTADO.md`, `BACKLOG.md` e tarefas concluídas.
-
-## Checklist De Revisão
-
-- [ ] Tarefa entregue corresponde ao escopo autorizado
-- [ ] Nenhum arquivo fora do escopo foi alterado
-- [ ] Contrato foi respeitado
-- [ ] Arquivos compartilhados foram identificados
-- [ ] Nenhuma migration foi criada sem autorização
-- [ ] Build passou
-- [ ] Testes aplicáveis passaram
-- [ ] Relatório informa arquivos, riscos e validações
-- [ ] Ordem de integração foi confirmada
-
-## Conflitos E Resultados
-
-Nenhuma integração foi executada nesta primeira entrega.
+As frentes executam em paralelo a partir de um contrato congelado. A revisão ocorre depois das entregas, sem merge automático.
 
 ## Entrega PIX-MANUAL-001
 
-Ordem obrigatória:
+1. Claude Code implementa `IPagamentoPixService` real na branch Backend.
+2. Cursor implementa as páginas reais usando o fake Development na branch Frontend.
+3. Ambos compilam, validam, escrevem relatórios exclusivos e criam commits independentemente.
+4. O gestor executa `revisar entregas` e verifica contrato, escopo, testes e conflitos.
+5. Após autorização, integrar Backend numa worktree de integração.
+6. Gerar e revisar a migration somente após autorização específica.
+7. Integrar Frontend; o registro DI real do Backend substitui o fake automaticamente.
+8. Executar build e smoke test ponta a ponta.
+9. Atualizar estado, backlog, frentes e relatório de integração.
 
-1. Claude Code executa Backend e Cursor executa componentes Frontend em paralelo.
-2. Principal revisa os dois commits independentemente.
-3. Principal integra Backend e, mediante autorização, gera e revisa a migration.
-4. Principal integra os componentes Frontend, sem conflito de arquivos.
-5. Principal conecta os componentes às páginas e Services conforme o contrato.
-6. Compilar e executar smoke test ponta a ponta.
+## Checklist
 
-As duas frentes estão liberadas agora. Somente a conexão final depende das duas entregas.
+- [ ] Contrato congelado respeitado
+- [ ] Arquivos das frentes não se sobrepõem
+- [ ] Fake não está ativo fora de Development
+- [ ] Implementação real aplica isolamento por empresa e telefone
+- [ ] Cliente não confirma pagamento
+- [ ] Migration revisada e autorizada
+- [ ] Build e smoke tests aprovados
+
+Nenhuma integração desta entrega foi executada ainda.
