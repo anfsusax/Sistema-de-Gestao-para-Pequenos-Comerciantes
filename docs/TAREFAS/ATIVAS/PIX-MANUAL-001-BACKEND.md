@@ -94,3 +94,14 @@ A worktree contém a implementação da rodada anterior ainda sem commit. Essas 
 ### Critério De Nova Entrega
 
 A entrega só retorna para revisão quando os dois ajustes de regra estiverem concluídos, o build estiver sem erros, todos os arquivos da implementação estiverem no commit e a worktree estiver limpa.
+### Modo Obrigatório Neste Sandbox
+
+O sandbox desta IA já demonstrou que não acessa os metadados Git da pasta irmã e não possui SDK .NET. Isso não é mais um bloqueio nem uma decisão do usuário.
+
+- Não tente baixar ou instalar o SDK novamente.
+- Não peça acesso à pasta pai e não peça que o usuário escolha quem fará o commit.
+- Aplique agora todos os ajustes de código desta rodada e atualize o relatório.
+- Registre `BUILD, DIFF E COMMIT PENDENTES DO GESTOR` apenas como transferência automática de responsabilidade.
+- Encerre com `EXECUTOR CONCLUÍDO — AGUARDANDO VALIDAÇÃO DO GESTOR`.
+
+O gestor executará build, revisão do diff e commit localmente assim que receber essa conclusão.
