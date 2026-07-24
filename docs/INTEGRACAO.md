@@ -43,12 +43,11 @@ Nenhuma integração foi executada nesta primeira entrega.
 
 Ordem obrigatória:
 
-1. Claude Code implementa Backend sem migration.
-2. Principal revisa contrato, diff, build e relatório.
-3. Backend é integrado somente após aprovação.
-4. Principal gera e revisa a migration, mediante autorização específica.
-5. Frontend é sincronizado com a nova base.
-6. Cursor implementa as três telas sem alterar Backend.
-7. Principal integra Frontend e executa smoke test ponta a ponta.
+1. Claude Code executa Backend e Cursor executa componentes Frontend em paralelo.
+2. Principal revisa os dois commits independentemente.
+3. Principal integra Backend e, mediante autorização, gera e revisa a migration.
+4. Principal integra os componentes Frontend, sem conflito de arquivos.
+5. Principal conecta os componentes às páginas e Services conforme o contrato.
+6. Compilar e executar smoke test ponta a ponta.
 
-O Frontend permanece bloqueado até a conclusão dos passos 1 a 5.
+As duas frentes estão liberadas agora. Somente a conexão final depende das duas entregas.

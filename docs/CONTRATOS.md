@@ -67,7 +67,7 @@ O projeto usa Blazor Server com Services internos. A ausência de API REST, Cont
 ### Identificação
 
 - Entrega: pagamento Pix manual por empresa
-- Status: Aprovado para implementação do Backend
+- Status: Aprovado para implementação paralela de Backend e Frontend
 - Responsáveis: Claude Code (Backend), Cursor (Frontend), GPT (integração e migration autorizada)
 - Data: 2026-07-24
 
@@ -167,6 +167,13 @@ Validação:
 - Indisponível: mostrar a mensagem pública do contrato
 - Erro: `Não foi possível carregar o pagamento. Tente novamente.`
 
+### Execução Paralela
+
+- Backend implementa entidades, mapeamentos e Services.
+- Frontend implementa componentes visuais novos com parâmetros primitivos e EventCallback, sem depender dos novos modelos em compilação.
+- Nenhuma das frentes altera arquivos da outra.
+- A ligação dos componentes às páginas e Services ocorre no Principal após as duas entregas.
+
 ### Migration
 
 Necessária para os campos de `Empresa` e `Pedido`, mas não autorizada nesta tarefa. Deve ser gerada no ambiente Principal somente depois da revisão e integração do Backend.
@@ -179,5 +186,5 @@ Necessária para os campos de `Empresa` e `Pedido`, mas não autorizada nesta ta
 - [ ] Cliente não consegue confirmar o próprio pagamento
 - [ ] Confirmação do comerciante é idempotente
 - [ ] Status de pagamento não muda o status operacional do pedido
-- [ ] Backend integrado antes do início do Frontend
+- [ ] Backend e Frontend executados em paralelo sem editar os mesmos arquivos
 - [ ] Migration gerada somente após autorização

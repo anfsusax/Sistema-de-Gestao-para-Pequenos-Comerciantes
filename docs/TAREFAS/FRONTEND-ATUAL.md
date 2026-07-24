@@ -1,86 +1,76 @@
 ﻿# TÍTULO
 
-PIX-MANUAL-001 — Interface de pagamento Pix manual
+PIX-MANUAL-001 — Componentes visuais do pagamento Pix manual
 
 # OBJETIVO
 
-Adicionar configuração Pix, pagamento em “Meus pedidos” e confirmação administrativa, consumindo exatamente o contrato aprovado.
+Construir em paralelo os componentes visuais reutilizáveis do Pix manual, compiláveis sem depender da implementação Backend.
 
 # CONTEXTO
 
-**BLOQUEADA:** iniciar somente depois que o Backend estiver revisado, integrado à `main`, a worktree Frontend estiver sincronizada e a migration autorizada tiver sido aplicada no ambiente de teste.
+**LIBERADA PARA EXECUÇÃO PARALELA.** O contrato funcional está congelado. O Backend implementará regras e persistência enquanto o Frontend implementará componentes puramente visuais. A ligação com páginas e Services será feita depois no ambiente Principal.
 
 # ESCOPO PERMITIDO
 
 - Trabalhar somente na worktree Frontend.
-- Ler `WORKTREE.md`, `ESTADO.md`, `CONTRATOS.md` e este arquivo.
-- Alterar somente as páginas e estilos isolados listados nesta tarefa.
+- Criar componentes novos e CSS isolado.
+- Receber dados por parâmetros primitivos e comunicar ações por `EventCallback`.
+- Usar apenas tipos já existentes no branch ou tipos privados de apresentação.
 
 # FORA DO ESCOPO
 
-- Banco, DbContext, migrations, entidades, enums, Services e persistência.
-- Regras de negócio e novos serviços duplicados.
-- Autenticação sem autorização.
-- Mudança de arquitetura ou refatoração geral.
-- Gateway, webhook, cartão, upload de comprovante ou confirmação automática.
+- Alterar páginas existentes nesta etapa.
+- Alterar Services, entidades, enums, DbContext, migrations ou `Program.cs`.
+- Criar serviço falso, duplicado ou regra de negócio no Frontend.
+- Gateway, webhook, cartão, comprovante ou confirmação automática.
 
 # ARQUIVOS PROVÁVEIS
 
-- `src/SalgaFacil.Web/Components/Pages/Configuracoes/Index.razor`
-- novo `src/SalgaFacil.Web/Components/Pages/Configuracoes/Index.razor.css`
-- `src/SalgaFacil.Web/Components/Pages/Loja/MeusPedidos.razor`
-- novo `src/SalgaFacil.Web/Components/Pages/Loja/MeusPedidos.razor.css`
-- `src/SalgaFacil.Web/Components/Pages/Pedidos/Detalhe.razor`
-- novo `src/SalgaFacil.Web/Components/Pages/Pedidos/Detalhe.razor.css`
+- novo `src/SalgaFacil.Web/Components/Shared/PagamentoPix/PagamentoPixClienteCard.razor`
+- novo `src/SalgaFacil.Web/Components/Shared/PagamentoPix/PagamentoPixClienteCard.razor.css`
+- novo `src/SalgaFacil.Web/Components/Shared/PagamentoPix/ConfiguracaoPixSection.razor`
+- novo `src/SalgaFacil.Web/Components/Shared/PagamentoPix/ConfiguracaoPixSection.razor.css`
+- novo `src/SalgaFacil.Web/Components/Shared/PagamentoPix/ConfirmacaoPagamentoPixCard.razor`
+- novo `src/SalgaFacil.Web/Components/Shared/PagamentoPix/ConfirmacaoPagamentoPixCard.razor.css`
 
 # CONTRATO
 
-Consumir exatamente `PIX-MANUAL-001` em `docs/CONTRATOS.md`. Não alterar Services, entidades, enums ou assinaturas.
+Seguir os estados e textos de `PIX-MANUAL-001` em `docs/CONTRATOS.md`. Os componentes devem expor parâmetros simples para valor, chave, beneficiário, disponibilidade, pagamento confirmado, data, carregamento e erro.
 
 # REGRAS DE NEGÓCIO
 
-- Configurações: permitir ativar Pix manual, informar chave e beneficiário e explicar que a confirmação é manual.
-- Meus pedidos: oferecer `Pagar com Pix` somente para pedido Pix não pago.
-- Exibir total, beneficiário, chave e ação de copiar.
-- Nunca oferecer ao cliente botão para confirmar pagamento.
-- Pedido pago exibe badge e data de confirmação.
-- Detalhe administrativo permite confirmar o recebimento apenas para Pix aguardando.
-- Não confundir status do pagamento com status operacional do pedido.
+- Não implementar regra de negócio.
+- Cliente vê dados e copia a chave, mas nunca confirma pagamento.
+- Componente administrativo apenas dispara `EventCallback` de confirmação.
+- Não confundir status de pagamento com status operacional do pedido.
 
 # CRITÉRIOS DE ACEITE
 
-- [ ] Configuração Pix clara e validada
-- [ ] Pagamento aparece apenas nos pedidos elegíveis
-- [ ] Chave é copiada com feedback acessível
-- [ ] Cliente não confirma pagamento
-- [ ] Comerciante consegue confirmar sem alterar o pedido operacional
-- [ ] Mobile e responsividade contemplados
-- [ ] Estados de carregamento, vazio, sucesso e erro definidos
+- [ ] Três componentes novos compilam isoladamente
+- [ ] Estados carregando, indisponível, aguardando, copiado, pago e erro estão representados
+- [ ] Ações são expostas por `EventCallback`
+- [ ] Nenhuma página ou arquivo Backend foi alterado
+- [ ] Layout responsivo e acessível
 - [ ] Build sem erros
-- [ ] Nenhum arquivo fora do escopo alterado
 
 # TESTES OBRIGATÓRIOS
 
-- Validar Pix inativo, indisponível, aguardando e pago.
-- Validar pedido não Pix.
-- Validar falha ao copiar e falha ao carregar.
-- Validar confirmação administrativa repetida.
+- Renderizar visualmente todos os estados dos componentes.
 - Validar breakpoints 390, 768 e 1366 px.
+- Validar navegação por teclado e feedback de cópia.
 - Executar `dotnet build SalgaFacil.slnx --no-restore`.
 
 # RESTRIÇÕES
 
-- Não alterar banco, entidades, enums, Services ou migrations.
-- Não criar serviço duplicado.
-- JavaScript somente para copiar a chave, se necessário.
-- Não alterar `app.css`; usar CSS isolado das páginas.
-- Respeitar o padrão visual existente e priorizar mobile.
+- Não alterar `app.css`; usar CSS isolado.
+- Não adicionar pacote ou JavaScript global.
+- Não editar arquivo compartilhado.
 - Criar um commit pequeno e descritivo.
 
 # RESULTADO ESPERADO
 
-Fluxo visual Pix manual responsivo, acessível e fiel ao contrato.
+Componentes visuais prontos para serem conectados às páginas no Principal após a entrega Backend, sem impedir trabalho paralelo.
 
 # FORMATO DO RELATÓRIO FINAL
 
-Preencher `docs/RELATORIOS/FRONTEND.md` com resumo, arquivos alterados, breakpoints e cenários validados, resultado do build, riscos, pendências e hash do commit.
+Preencher `docs/RELATORIOS/FRONTEND.md` com componentes criados, parâmetros, eventos, estados validados, breakpoints, build e hash do commit.
