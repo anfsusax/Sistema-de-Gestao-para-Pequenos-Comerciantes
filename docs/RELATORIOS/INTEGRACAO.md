@@ -2,32 +2,33 @@
 
 ## Resultado
 
-- Backend: **APROVADO** — commit do gestor `0b45dee`.
-- Frontend: **APROVADO** — ajustes em `bce517c` e relatório do gestor `743d2a9`.
-- Base comum: `00f3e49`.
-- Merge realizado: não.
+- Backend: integrado no Principal.
+- Frontend: integrado no Principal.
+- Migration: `20260725024329_PixManual` criada no Principal e não aplicada ao banco.
+- Build final: sucesso, 0 erros e 11 avisos preexistentes.
 
-## Validação
+## Regras Entregues
 
-- Backend: limites de 140/200 aplicados após `Trim()`; disponibilidade exige Pix ativo, chave e beneficiário.
-- Frontend: erro público genérico e ação de confirmação repetida removida.
-- Build Backend: 0 erros, 11 avisos preexistentes.
-- Build Frontend: 0 erros, 9 avisos preexistentes.
-- Smoke HTTP: rotas principais responderam 200.
-- Não há sobreposição de arquivos entre as frentes.
-- Nenhuma migration foi criada nas frentes.
+- Configuração Pix manual com chave e beneficiário.
+- Limites de 140 e 200 caracteres validados no serviço e no banco.
+- Cliente consulta e copia a chave na tela Meus Pedidos.
+- Comerciante confirma recebimento manualmente.
+- Confirmação idempotente e separada do status operacional.
+- Erros públicos não expõem mensagens internas.
 
-## Integração Recomendada
+## Commits Integrados
 
-1. Integrar Backend.
-2. Integrar Frontend.
-3. Criar a migration no Principal.
-4. Executar build e smoke visual ponta a ponta.
+- Backend: `6e81856` e `4910549`.
+- Frontend: `c1f2347`, `69dee2b` e `475c341`.
+- Migration e encerramento: registrado no commit seguinte a este relatório.
 
 ## Estado
 
-- [x] Backend aprovado
-- [x] Frontend aprovado
-- [ ] Integrado
+- [x] Backend integrado
+- [x] Frontend integrado
+- [x] Migration criada
+- [x] Build aprovado
+- [ ] Migration aplicada ao banco
+- [ ] Smoke visual final
 
-A integração aguarda autorização do usuário.
+A aplicação da migration ao banco continua sendo uma ação separada.

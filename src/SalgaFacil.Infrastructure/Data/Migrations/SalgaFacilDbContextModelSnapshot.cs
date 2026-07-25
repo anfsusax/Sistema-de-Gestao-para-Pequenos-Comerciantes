@@ -193,6 +193,17 @@ namespace SalgaFacil.Infrastructure.Data.Migrations
                         .HasMaxLength(200)
                         .HasColumnType("character varying(200)");
 
+                    b.Property<bool>("PixAtivo")
+                        .HasColumnType("boolean");
+
+                    b.Property<string>("PixChave")
+                        .HasMaxLength(140)
+                        .HasColumnType("character varying(140)");
+
+                    b.Property<string>("PixNomeBeneficiario")
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)");
+
                     b.Property<string>("RazaoSocial")
                         .HasMaxLength(200)
                         .HasColumnType("character varying(200)");
@@ -405,7 +416,13 @@ namespace SalgaFacil.Infrastructure.Data.Migrations
                         .HasMaxLength(500)
                         .HasColumnType("character varying(500)");
 
+                    b.Property<DateTime?>("PagamentoConfirmadoEm")
+                        .HasColumnType("timestamp with time zone");
+
                     b.Property<int>("Status")
+                        .HasColumnType("integer");
+
+                    b.Property<int?>("StatusPagamento")
                         .HasColumnType("integer");
 
                     b.Property<decimal>("Total")
