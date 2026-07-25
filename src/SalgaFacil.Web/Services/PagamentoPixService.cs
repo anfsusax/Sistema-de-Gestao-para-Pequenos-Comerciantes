@@ -32,18 +32,25 @@ public sealed class PagamentoPixService(SalgaFacilDbContext db, IEmpresaContext 
     public async Task SalvarConfiguracaoAsync(ConfiguracaoPixDto configuracao)
     {
         var empresa = await ObterEmpresaAutenticadaAsync();
+        var chave = configuracao.Chave?.Trim();
+        var nomeBeneficiario = configuracao.NomeBeneficiario?.Trim();
+
+        if (chave is { Length: > 140 })
+            throw new InvalidOperationException("A chave Pix deve ter no máximo 140 caracteres.");
+        if (nomeBeneficiario is { Length: > 200 })
+            throw new InvalidOperationException("O nome do beneficiário do Pix deve ter no máximo 200 caracteres.");
 
         if (configuracao.Ativo)
         {
-            if (string.IsNullOrWhiteSpace(configuracao.Chave))
+            if (string.IsNullOrWhiteSpace(chave))
                 throw new InvalidOperationException("Informe a chave Pix.");
-            if (string.IsNullOrWhiteSpace(configuracao.NomeBeneficiario))
+            if (string.IsNullOrWhiteSpace(nomeBeneficiario))
                 throw new InvalidOperationException("Informe o nome do beneficiário do Pix.");
         }
 
         empresa.PixAtivo = configuracao.Ativo;
-        empresa.PixChave = configuracao.Chave?.Trim();
-        empresa.PixNomeBeneficiario = configuracao.NomeBeneficiario?.Trim();
+        empresa.PixChave = chave;
+        empresa.PixNomeBeneficiario = nomeBeneficiario;
         await db.SaveChangesAsync();
     }
 
@@ -112,7 +119,9 @@ public sealed class PagamentoPixService(SalgaFacilDbContext db, IEmpresaContext 
         if (pedido.FormaPagamento != FormaPagamento.Pix)
             return null;
 
-        var disponivel = pedido.Empresa.PixAtivo && !string.IsNullOrWhiteSpace(pedido.Empresa.PixChave);
+        var disponivel = pedido.Empresa.PixAtivo
+            && !string.IsNullOrWhiteSpace(pedido.Empresa.PixChave)
+            && !string.IsNullOrWhiteSpace(pedido.Empresa.PixNomeBeneficiario);
         // Pix antigo (anterior a esta funcionalidade) tem StatusPagamento nulo: interpretado como Aguardando.
         var status = pedido.StatusPagamento ?? StatusPagamento.Aguardando;
         var pago = status == StatusPagamento.Pago;
