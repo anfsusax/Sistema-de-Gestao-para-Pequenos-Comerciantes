@@ -72,6 +72,43 @@ Backend real pronto para revisão e integração.
 
 Preencher `docs/RELATORIOS/PIX-MANUAL-001-BACKEND.md`.
 
+## RODADA DE AJUSTES DO GESTOR — 2026-07-24
+
+Esta seção tem precedência para a retomada da entrega após a primeira revisão.
+
+### Regra Excepcional De Retomada
+
+A worktree contém a implementação da rodada anterior ainda sem commit. Essas alterações são esperadas e pertencem a esta tarefa. Não pare por falta de limpeza, não descarte, não restaure e não recomece do zero. Antes de editar, confirme que os arquivos modificados são somente os arquivos previstos nesta tarefa e o relatório. Se houver qualquer outro arquivo, pare e informe.
+
+### Ajustes Obrigatórios
+
+1. Em `PagamentoPixService.SalvarConfiguracaoAsync`, normalize com `Trim()` e valide antes de persistir:
+   - chave Pix com no máximo 140 caracteres;
+   - nome do beneficiário com no máximo 200 caracteres.
+   Use mensagens de validação claras e não deixe a restrição do banco virar erro técnico para a interface.
+2. Em `MontarDto`, considere o Pix disponível somente quando `PixAtivo` estiver verdadeiro e chave e beneficiário estiverem preenchidos.
+3. Revise o diff completo, incluindo `StatusPagamento.cs` e `PagamentoPixService.cs`, que ainda estão sem rastreamento.
+4. Execute `dotnet restore SalgaFacil.slnx` se necessário e `dotnet build SalgaFacil.slnx --no-restore`.
+5. Atualize o relatório: substitua a limitação antiga de build/Git pelo resultado real desta rodada, registre os ajustes e marque a revisão do diff.
+6. Não execute `git add` nem crie commit. Entregue implementação e relatório no working tree para validação do gestor. Não faça migration, merge, rebase ou push.
+
+### Critério De Nova Entrega
+
+A entrega só retorna para revisão quando os dois ajustes de regra estiverem concluídos, o build estiver sem erros, todos os arquivos da implementação e o relatório estiverem prontos no working tree para o gestor.
+### Modo Obrigatório Neste Sandbox
+
+O sandbox desta IA já demonstrou que não acessa os metadados Git da pasta irmã e não possui SDK .NET. Isso não é mais um bloqueio nem uma decisão do usuário.
+
+- Não tente baixar ou instalar o SDK novamente.
+- Não peça acesso à pasta pai e não peça que o usuário escolha quem fará o commit.
+- Aplique agora todos os ajustes de código desta rodada e atualize o relatório.
+- Registre `BUILD, DIFF E COMMIT PENDENTES DO GESTOR` como transferência automática de responsabilidade, sem tentar preparar stage ou commit.
+- Encerre com `EXECUTOR CONCLUÍDO — AGUARDANDO VALIDAÇÃO DO GESTOR`.
+
+O gestor executará build, revisão do diff e commit localmente assim que receber essa conclusão.
+=======
+
+
 ## RODADA DE AJUSTES 2 DO GESTOR — 2026-07-24
 
 O commit legado `6d2f8e8` compilou com 0 erros, mas não contém os dois ajustes obrigatórios da revisão anterior. Não repita tarefas de Git, instalação ou build; altere somente o serviço e o relatório.
