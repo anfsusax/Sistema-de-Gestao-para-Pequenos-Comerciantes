@@ -28,7 +28,11 @@
 - [x] Frontend integrado
 - [x] Migration criada
 - [x] Build aprovado
-- [ ] Migration aplicada ao banco
+- [x] Migration aplicada ao banco
 - [ ] Smoke visual final
 
 A aplicação da migration ao banco continua sendo uma ação separada.
+
+## Banco De Dados
+
+- Migration 20260725024329_PixManual aplicada com sucesso em 2026-07-24.
