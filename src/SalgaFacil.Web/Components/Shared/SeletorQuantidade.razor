@@ -45,7 +45,8 @@
                     <div class="pm-quantidade-area">
                         <label class="pm-label">Quantidade</label>
                         <div class="pm-stepper">
-                            <button type="button" class="pm-stepper-btn" @onclick="Decrementar" disabled="@(_quantidade <= PrecificacaoProduto.QuantidadeMinima)" aria-label="Diminuir quantidade">−</button>
+                            <button type="button" class="pm-stepper-btn" @onclick="Decrementar" disabled="@(_quantidade <= PrecificacaoProduto.QuantidadeMinima)" 
+                            aria-label="Diminuir quantidade">−</button>
                             <input class="pm-stepper-input" type="text" inputmode="numeric" pattern="\d*"
                                    value="@_qtdTexto" @oninput="OnDigitar" aria-label="Quantidade" />
                             <button type="button" class="pm-stepper-btn" @onclick="Incrementar" aria-label="Aumentar quantidade">+</button>
@@ -110,10 +111,7 @@
     private string? _erro;
     private int? _produtoIdAnterior;
     private readonly System.Globalization.CultureInfo _ptBr = new("pt-BR");
-
-    // Forma de pagamento NÃO é escolhida aqui (removido a pedido do usuário em
-    // 2026-07-24) — a seleção real, com esta mesma aparência de cards, fica
-    // exclusivamente em Loja/Carrinho.razor. Ver _ia/DECISOES.md 2026-07-24.
+     
     private bool _favoritoAtivo;
     private string? _favoritoMsg;
 
@@ -129,9 +127,7 @@
     private decimal _total => Produto is null ? 0 : PrecificacaoProduto.CalcularTotal(Produto, _quantidade);
 
     protected override void OnParametersSet()
-    {
-        // Reseta o estado sempre que um produto novo é aberto no modal
-        // (evita "vazar" quantidade/favorito para o produto anterior).
+    { 
         if (Produto?.Id != _produtoIdAnterior)
         {
             _produtoIdAnterior = Produto?.Id;
@@ -180,8 +176,7 @@
 
     private void Favoritar()
     {
-        // Sem persistência real (não existe lista de favoritos no sistema hoje) —
-        // feedback honesto em vez de fingir uma função que não existe.
+         
         _favoritoAtivo = !_favoritoAtivo;
         _favoritoMsg = _favoritoAtivo ? "Favoritos chega em breve por aqui 🙂" : null;
     }

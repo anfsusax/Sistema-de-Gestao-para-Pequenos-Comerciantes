@@ -4,6 +4,7 @@
 @inject CarrinhoSessao Sacola
 @inject ClienteAuthService ClienteAuth
 @inject IPagamentoPixService PagamentoPix
+@inject ILogger<Carrinho> _logger
 
 <PageTitle>Checkout — @(_empresa?.NomeFantasia ?? "Loja")</PageTitle>
 
@@ -49,6 +50,10 @@ else
                     </tbody>
                 </table>
                 <p style="text-align:right;font-weight:700;margin-top:12px">Total: @Total.ToString("C", _ptBr)</p>
+                @if (!string.IsNullOrWhiteSpace(_erro))
+                {
+                    <div class="login-error" style="margin-top:12px">@_erro</div>
+                }
                 <div style="display:flex;justify-content:flex-end;gap:8px;margin-top:14px;flex-wrap:wrap">
                     <button type="button" class="btn btn-secondary" @onclick="EsvaziarCarrinho">Esvaziar</button>
                     <button type="button" class="btn btn-primary" @onclick="ConfirmarCarrinho">Confirmar compra</button>
@@ -210,25 +215,53 @@ else
 
     private async Task Alterar(int produtoId, int delta)
     {
-        var itens = Sacola.Obter(Slug);
-        var item = itens.FirstOrDefault(i => i.ProdutoId == produtoId);
-        if (item is null) return;
-        item.Quantidade += delta;
-        if (item.Quantidade <= 0) itens.Remove(item);
-        await Sacola.DefinirAsync(Slug, itens);
-        await MontarLinhas();
+        // Try/catch aqui pelo mesmo motivo do Index.razor/ConfirmarAdicao: CarrinhoSessao já
+        // engole as falhas esperadas do JS interop internamente, mas se algo inesperado escapar
+        // não pode subir pela EventCallback e derrubar o circuito — senão o usuário perde a
+        // tela do carrinho no meio da compra e precisa recarregar a página.
+        try
+        {
+            var itens = Sacola.Obter(Slug);
+            var item = itens.FirstOrDefault(i => i.ProdutoId == produtoId);
+            if (item is null) return;
+            item.Quantidade += delta;
+            if (item.Quantidade <= 0) itens.Remove(item);
+            await Sacola.DefinirAsync(Slug, itens);
+            await MontarLinhas();
+        }
+        catch (Exception ex)
+        {
+            _erro = "Não foi possível atualizar a quantidade agora. Tente novamente.";
+            _logger.LogError(ex, "Falha ao alterar quantidade do produto {ProdutoId} no carrinho da loja {Slug}", produtoId, Slug);
+        }
     }
 
     private async Task Remover(int produtoId)
     {
-        await Sacola.DefinirAsync(Slug, Sacola.Obter(Slug).Where(i => i.ProdutoId != produtoId).ToList());
-        await MontarLinhas();
+        try
+        {
+            await Sacola.DefinirAsync(Slug, Sacola.Obter(Slug).Where(i => i.ProdutoId != produtoId).ToList());
+            await MontarLinhas();
+        }
+        catch (Exception ex)
+        {
+            _erro = "Não foi possível remover o item agora. Tente novamente.";
+            _logger.LogError(ex, "Falha ao remover produto {ProdutoId} do carrinho da loja {Slug}", produtoId, Slug);
+        }
     }
 
     private async Task EsvaziarCarrinho()
     {
-        await Sacola.LimparAsync(Slug);
-        _linhas = [];
+        try
+        {
+            await Sacola.LimparAsync(Slug);
+            _linhas = [];
+        }
+        catch (Exception ex)
+        {
+            _erro = "Não foi possível esvaziar o carrinho agora. Tente novamente.";
+            _logger.LogError(ex, "Falha ao esvaziar carrinho da loja {Slug}", Slug);
+        }
     }
 
     private void ConfirmarCarrinho()

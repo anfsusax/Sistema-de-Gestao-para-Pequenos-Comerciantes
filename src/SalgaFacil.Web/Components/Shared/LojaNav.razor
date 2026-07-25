@@ -1,7 +1,16 @@
 @* Navegação pública do cardápio — mesmos 3 links (Carrinho com contador, Meus pedidos,
-   Acesso do comerciante) em todas as páginas da loja. Extraído de Loja/Index.razor para
-   não duplicar o mesmo bloco em Carrinho.razor e MeusPedidos.razor. *@
+   Acesso do comerciante) em todas as páginas da loja.
+
+   Este componente NÃO recebe o carrinho como [Parameter] — ele lê QuantidadeTotal direto do
+   serviço Scoped injetado. Por isso o re-render automático que o Blazor dispara quando um
+   [Parameter] muda não se aplica aqui: quando o carrinho muda em outro componente da árvore
+   (o modal de "Adicionar" em Index.razor, os botões +/- em Carrinho.razor), este componente
+   só saberia da mudança no seu PRÓXIMO render por conta própria — o que só acontecia ao
+   navegar para /carrinho. Corrigido inscrevendo-se em CarrinhoSessao.CarrinhoAlterado (ver
+   comentário na classe) para chamar o próprio StateHasChanged assim que o SEU slug mudar. *@
+@implements IDisposable
 @inject CarrinhoSessao Carrinho
+@inject ILogger<LojaNav> _logger
 
 <div class="loja-header-actions">
     <a class="btn btn-secondary" href="/loja/@Slug/carrinho">Carrinho (@Carrinho.QuantidadeTotal(Slug))</a>
@@ -11,4 +20,32 @@
 
 @code {
     [Parameter, EditorRequired] public string Slug { get; set; } = "";
+
+    protected override void OnInitialized()
+    {
+        Carrinho.CarrinhoAlterado += AoCarrinhoAlterado;
+        _logger.LogInformation("LojaNav inscrito em CarrinhoAlterado para slug {Slug} (instância {Id})", Slug, GetHashCode());
+    }
+
+    private void AoCarrinhoAlterado(string slug)
+    {
+        // Log temporário de diagnóstico (2026-07-25) — ver comentário em CarrinhoSessao.DefinirAsync.
+        var bate = string.Equals(slug, Slug, StringComparison.OrdinalIgnoreCase);
+        _logger.LogInformation(
+            "LojaNav (instância {Id}, Slug={MeuSlug}) recebeu CarrinhoAlterado({SlugEvento}) — bate = {Bate}",
+            GetHashCode(), Slug, slug, bate);
+        if (!bate) return;
+
+        // InvokeAsync marshala para o SynchronizationContext do próprio componente antes de
+        // chamar StateHasChanged — necessário porque quem dispara o evento pode ser qualquer
+        // outro componente da árvore, não só um ancestral direto deste.
+        _ = InvokeAsync(StateHasChanged);
+    }
+
+    // Sem isso, cada navegação entre páginas da loja (Index -> Carrinho -> MeusPedidos) cria um
+    // novo LojaNav que se inscreve no evento sem nunca se desinscrever — o serviço Scoped vive
+    // o circuito inteiro, então instâncias antigas e já descartadas ficariam acumulando na
+    // invocation list de CarrinhoAlterado (memory leak) e ainda tentariam re-renderizar um
+    // componente morto a cada mudança de carrinho.
+    public void Dispose() => Carrinho.CarrinhoAlterado -= AoCarrinhoAlterado;
 }

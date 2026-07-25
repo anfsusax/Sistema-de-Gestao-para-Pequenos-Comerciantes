@@ -2,6 +2,7 @@
 @layout SalgaFacil.Web.Components.Layout.PublicLayout
 @inject LojaPublicaService Loja
 @inject CarrinhoSessao Carrinho
+@inject ILogger<Index> _logger
 
 <PageTitle>@(_empresa?.NomeFantasia ?? _empresa?.Nome ?? "Cardápio")</PageTitle>
 
@@ -141,15 +142,40 @@ else
         var p = _produtoSelecionado;
         if (p == null || quantidade < PrecificacaoProduto.QuantidadeMinima) return;
 
-        // Se o produto já está no carrinho, soma à quantidade existente
-        // em vez de criar uma linha duplicada.
-        var itens = Carrinho.Obter(Slug);
-        var item = itens.FirstOrDefault(c => c.ProdutoId == p.Id);
-        if (item == null) itens.Add(new ItemCarrinhoDto { ProdutoId = p.Id, Quantidade = quantidade });
-        else item.Quantidade += quantidade;
-        await Carrinho.DefinirAsync(Slug, itens);
+        try
+        {
+            // Se o produto já está no carrinho, soma à quantidade existente
+            // em vez de criar uma linha duplicada.
+            var itens = Carrinho.Obter(Slug);
+            var item = itens.FirstOrDefault(c => c.ProdutoId == p.Id);
+            if (item == null) itens.Add(new ItemCarrinhoDto { ProdutoId = p.Id, Quantidade = quantidade });
+            else item.Quantidade += quantidade;
+            await Carrinho.DefinirAsync(Slug, itens);
 
-        _msg = $"{quantidade}x {p.Nome} adicionado ao carrinho.";
-        _produtoSelecionado = null;
+            // DIAGNÓSTICO TEMPORÁRIO (2026-07-25) — mostra no próprio toast, sem precisar de
+            // console/log do servidor: o total real após este Adicionar, e quantos LojaNav
+            // estão inscritos para receber o aviso de mudança. Se "assinantes LojaNav" vier 0,
+            // o badge do cabeçalho realmente não tem como saber que o carrinho mudou — aponta
+            // para um problema de inscrição/lifecycle no LojaNav.razor, não neste método.
+            _msg = $"{quantidade}x {p.Nome} adicionado. Total agora: {Carrinho.QuantidadeTotal(Slug)} | assinantes LojaNav: {Carrinho.AssinantesCarrinhoAlterado}";
+        }
+        catch (Exception ex)
+        {
+            // Rede fina de segurança: CarrinhoSessao já trata as falhas esperadas do JS interop
+            // internamente (não deveria propagar nada até aqui). Se mesmo assim algo inesperado
+            // escapar, não deixamos a exceção subir pela EventCallback e derrubar o circuito —
+            // isso era exatamente o bug relatado ("adicionei e o carrinho não atualizou, só
+            // recarregando"): sem este catch, o circuito Blazor morre e a página trava até F5.
+            _msg = "Não foi possível adicionar o item agora. Tente novamente.";
+            _logger.LogError(ex, "Falha ao adicionar produto {ProdutoId} ao carrinho da loja {Slug}", p.Id, Slug);
+        }
+        finally
+        {
+            // Fecha o modal e força a atualização do contador no LojaNav (cabeçalho) mesmo no
+            // caminho de erro acima — sem isso o usuário ficaria com o modal aberto e nenhum
+            // feedback visível de que algo deu errado.
+            _produtoSelecionado = null;
+            StateHasChanged();
+        }
     }
 }

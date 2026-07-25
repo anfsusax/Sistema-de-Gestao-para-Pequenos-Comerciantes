@@ -37,11 +37,8 @@ public class FrmNovoPedido : Form
         BackColor = WinStyles.FundoGeral;
         Font = WinStyles.FontePadrao;
 
-        // BUG CORRIGIDO: "corpo" estava com Dock=Fill + AutoSize=true ao mesmo tempo — combinação
-        // contraditória em WinForms que cortava o conteúdo que não coubesse (grid de itens e
-        // botões "Confirmar"/"Cancelar" podiam ficar fora da área visível). Dock=Top fixa a
-        // Largura e deixa a Altura livre pro AutoSize calcular a partir do conteúdo real.
-        var corpo = new FlowLayoutPanel { Dock = DockStyle.Top, FlowDirection = FlowDirection.TopDown, WrapContents = false, AutoSize = true, AutoSizeMode = AutoSizeMode.GrowAndShrink, Padding = new Padding(16) };
+        var corpo = new FlowLayoutPanel { Dock = DockStyle.Top, FlowDirection = FlowDirection.TopDown, WrapContents = false, 
+            AutoSize = true, AutoSizeMode = AutoSizeMode.GrowAndShrink, Padding = new Padding(16) };
 
         _cmbCliente = new ComboBox { Width = 450, DropDownStyle = ComboBoxStyle.DropDownList };
         _cmbCliente.Items.AddRange(DataStore.Clientes.Select(c => c.Nome).ToArray());
@@ -49,7 +46,8 @@ public class FrmNovoPedido : Form
         WinStyles.AdicionarCampo(corpo, "Cliente", _cmbCliente);
 
         corpo.Controls.Add(new Label { Text = "Produto", AutoSize = true, Margin = new Padding(0, 10, 0, 2) });
-        var pnlProd = new FlowLayoutPanel { FlowDirection = FlowDirection.LeftToRight, WrapContents = false, AutoSize = true, AutoSizeMode = AutoSizeMode.GrowAndShrink, Margin = new Padding(0) };
+        var pnlProd = new FlowLayoutPanel { FlowDirection = FlowDirection.LeftToRight, WrapContents = false, AutoSize = true, 
+            AutoSizeMode = AutoSizeMode.GrowAndShrink, Margin = new Padding(0) };
         _cmbProduto = new ComboBox { Width = 220, DropDownStyle = ComboBoxStyle.DropDownList };
         _cmbProduto.Items.AddRange(DataStore.Produtos.Where(p => p.Status == StatusProduto.Ativo).Select(p => p.Nome).ToArray());
         if (_cmbProduto.Items.Count > 0) _cmbProduto.SelectedIndex = 0;
