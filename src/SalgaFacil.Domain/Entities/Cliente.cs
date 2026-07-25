@@ -20,6 +20,7 @@ public class Cliente
     /// </summary>
     public string? TelefoneNormalizado { get; set; }
     public string? Email { get; set; }
+    public string? SenhaHash { get; set; }
     public DateTime? DataNascimento { get; set; }
     public string? Observacoes { get; set; }
     public bool Ativo { get; set; } = true;
