@@ -108,6 +108,84 @@ public class LojaPublicaService(SalgaFacilDbContext db, ClienteService clienteSe
         return new PedidoVisitanteResultado { PedidoId = pedido.Id, ClienteJaExistia = clienteJaExistia };
     }
 
+    public async Task<int> CriarPedidoClienteAsync(int empresaId, int clienteId, PedidoClienteDto dados)
+    {
+        if (dados.Itens.Count == 0)
+            throw new InvalidOperationException("Carrinho vazio.");
+        if (dados.Itens.Any(i => i.Quantidade < PrecificacaoProduto.QuantidadeMinima))
+            throw new InvalidOperationException("Quantidade inválida em um ou mais itens do carrinho.");
+        if (dados.FormaPagamento is null)
+            throw new InvalidOperationException("Selecione a forma de pagamento.");
+        if (dados.Entrega && string.IsNullOrWhiteSpace(dados.EnderecoEntrega))
+            throw new InvalidOperationException("Informe o endereço de entrega.");
+
+        _ = await db.Empresas.AsNoTracking()
+            .FirstOrDefaultAsync(e => e.Id == empresaId && e.Ativo)
+            ?? throw new InvalidOperationException("Loja não encontrada.");
+
+        var cliente = await db.Clientes
+            .FirstOrDefaultAsync(c => c.Id == clienteId && c.EmpresaId == empresaId && c.Ativo)
+            ?? throw new InvalidOperationException("Faça login novamente para continuar.");
+
+        var produtoIds = dados.Itens.Select(i => i.ProdutoId).Distinct().ToList();
+        var produtos = await db.Produtos
+            .Where(p => p.EmpresaId == empresaId && p.Ativo && produtoIds.Contains(p.Id))
+            .ToDictionaryAsync(p => p.Id);
+
+        if (produtos.Count != produtoIds.Count)
+            throw new InvalidOperationException("Um ou mais produtos não estão disponíveis.");
+
+        if (dados.Entrega && !string.IsNullOrWhiteSpace(dados.EnderecoEntrega))
+        {
+            var endereco = dados.EnderecoEntrega.Trim();
+            var jaExiste = await db.EnderecosCliente
+                .AnyAsync(e => e.ClienteId == cliente.Id && e.Logradouro == endereco);
+            if (!jaExiste)
+            {
+                db.EnderecosCliente.Add(new EnderecoCliente
+                {
+                    ClienteId = cliente.Id,
+                    Logradouro = endereco,
+                    Cidade = "—",
+                    Estado = "SP",
+                    Principal = !await db.EnderecosCliente.AnyAsync(e => e.ClienteId == cliente.Id)
+                });
+            }
+        }
+
+        var pedido = new Pedido
+        {
+            EmpresaId = empresaId,
+            ClienteId = cliente.Id,
+            Data = DateTime.UtcNow,
+            Status = StatusPedido.Aguardando,
+            Entrega = dados.Entrega,
+            EnderecoEntrega = dados.Entrega ? dados.EnderecoEntrega?.Trim() : null,
+            Observacoes = dados.Observacoes?.Trim(),
+            FormaPagamento = dados.FormaPagamento,
+            StatusPagamento = dados.FormaPagamento == FormaPagamento.Pix
+                ? StatusPagamento.Aguardando
+                : null
+        };
+
+        foreach (var item in dados.Itens)
+        {
+            var produto = produtos[item.ProdutoId];
+            pedido.Itens.Add(new PedidoItem
+            {
+                ProdutoId = produto.Id,
+                Descricao = produto.Nome,
+                Quantidade = item.Quantidade,
+                ValorUnitario = PrecificacaoProduto.PrecoUnitario(produto, item.Quantidade),
+                Total = PrecificacaoProduto.CalcularTotal(produto, item.Quantidade)
+            });
+        }
+
+        pedido.Total = pedido.Itens.Sum(i => i.Total);
+        db.Pedidos.Add(pedido);
+        await db.SaveChangesAsync();
+        return pedido.Id;
+    }
     /// <summary>
     /// Lista os pedidos (com itens) do cliente identificado pelo telefone informado, do mais
     /// recente para o mais antigo. Não há login no cardápio público — o telefone é o único
@@ -143,6 +221,14 @@ public class PedidoVisitanteDto
     public List<ItemCarrinhoDto> Itens { get; set; } = [];
 }
 
+public class PedidoClienteDto
+{
+    public bool Entrega { get; set; }
+    public string? EnderecoEntrega { get; set; }
+    public string? Observacoes { get; set; }
+    public FormaPagamento? FormaPagamento { get; set; }
+    public List<ItemCarrinhoDto> Itens { get; set; } = [];
+}
 public class ItemCarrinhoDto
 {
     public int ProdutoId { get; set; }

@@ -1,0 +1,20 @@
+@namespace SalgaFacil.Web.Components.Shared
+@using SalgaFacil.Web.Contracts.Pagamentos
+
+<span class="pix-status-badge @CssClass" role="status">@Label</span>
+
+@code {
+    [Parameter] public StatusPagamentoPix Status { get; set; }
+
+    private string Label => Status switch
+    {
+        StatusPagamentoPix.Pago => "Pago",
+        _ => "Aguardando pagamento"
+    };
+
+    private string CssClass => Status switch
+    {
+        StatusPagamentoPix.Pago => "pix-status-pago",
+        _ => "pix-status-aguardando"
+    };
+}

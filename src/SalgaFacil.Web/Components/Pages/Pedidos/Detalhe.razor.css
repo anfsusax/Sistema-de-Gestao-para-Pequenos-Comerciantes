@@ -1,0 +1,17 @@
+.pedido-detalhe-grid {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 16px;
+}
+
+@media (min-width: 768px) {
+    .pedido-detalhe-grid {
+        grid-template-columns: 1fr 1fr;
+    }
+}
+
+@media (min-width: 1366px) {
+    .pedido-detalhe-grid {
+        gap: 20px;
+    }
+}

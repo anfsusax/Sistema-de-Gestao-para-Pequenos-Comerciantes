@@ -1,0 +1,121 @@
+.pix-cliente-card {
+    margin-top: 14px;
+    padding: 14px 16px;
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    background: var(--pm-cinza, #f7f7f7);
+}
+
+.pix-cliente-header {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+    margin-bottom: 12px;
+}
+
+.pix-cliente-title {
+    margin: 0;
+    font-size: 15px;
+    font-weight: 700;
+}
+
+.pix-cliente-msg,
+.pix-cliente-hint,
+.pix-cliente-meta {
+    margin: 0;
+    color: var(--text-muted);
+    font-size: 13px;
+}
+
+.pix-cliente-erro {
+    margin: 0;
+    color: #b91c1c;
+    font-size: 13px;
+    font-weight: 600;
+}
+
+.pix-cliente-dados {
+    display: grid;
+    gap: 10px;
+    margin: 0;
+}
+
+.pix-cliente-dados dt {
+    font-size: 11px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    color: var(--text-muted);
+    margin-bottom: 2px;
+}
+
+.pix-cliente-dados dd {
+    margin: 0;
+    font-size: 14px;
+    font-weight: 600;
+    word-break: break-word;
+}
+
+.pix-cliente-valor {
+    font-size: 18px !important;
+    font-weight: 800 !important;
+    color: var(--text);
+}
+
+.pix-cliente-chave {
+    display: block;
+    padding: 10px 12px;
+    border-radius: 8px;
+    background: var(--card);
+    border: 1px dashed var(--border);
+    font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+    font-size: 13px;
+    font-weight: 600;
+}
+
+.pix-cliente-acoes {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    margin-top: 14px;
+}
+
+.pix-cliente-copiar {
+    width: 100%;
+}
+
+.pix-cliente-pago .pix-cliente-ok {
+    margin: 4px 0 0;
+    font-weight: 700;
+    color: var(--green-text);
+}
+
+.pix-simulado {
+    margin: 12px 0 0;
+    padding: 6px 10px;
+    border-radius: 8px;
+    background: var(--yellow-light);
+    color: var(--yellow-text);
+    font-size: 12px;
+    font-weight: 600;
+}
+
+@media (min-width: 768px) {
+    .pix-cliente-acoes {
+        flex-direction: row;
+        align-items: center;
+    }
+
+    .pix-cliente-copiar {
+        width: auto;
+        min-width: 160px;
+    }
+}
+
+@media (min-width: 1366px) {
+    .pix-cliente-card {
+        padding: 16px 18px;
+    }
+}

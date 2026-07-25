@@ -71,6 +71,7 @@ Backend real pronto para revisão e integração.
 # FORMATO DO RELATÓRIO FINAL
 
 Preencher `docs/RELATORIOS/PIX-MANUAL-001-BACKEND.md`.
+
 ## RODADA DE AJUSTES DO GESTOR — 2026-07-24
 
 Esta seção tem precedência para a retomada da entrega após a primeira revisão.
@@ -105,6 +106,8 @@ O sandbox desta IA já demonstrou que não acessa os metadados Git da pasta irm�
 - Encerre com `EXECUTOR CONCLUÍDO — AGUARDANDO VALIDAÇÃO DO GESTOR`.
 
 O gestor executará build, revisão do diff e commit localmente assim que receber essa conclusão.
+=======
+
 
 ## RODADA DE AJUSTES 2 DO GESTOR — 2026-07-24
 

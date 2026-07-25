@@ -101,6 +101,7 @@ public class SalgaFacilDbContext : DbContext
             e.Property(c => c.Cpf).HasMaxLength(14);
             e.Property(c => c.Cnpj).HasMaxLength(18);
             e.Property(c => c.Email).HasMaxLength(200);
+            e.Property(c => c.SenhaHash).HasMaxLength(200);
             e.Property(c => c.Observacoes).HasMaxLength(1000);
             e.HasIndex(c => new { c.EmpresaId, c.Nome });
             e.HasIndex(c => new { c.EmpresaId, c.Telefone });

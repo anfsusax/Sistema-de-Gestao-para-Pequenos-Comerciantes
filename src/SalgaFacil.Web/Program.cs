@@ -14,6 +14,7 @@ builder.Services.AddSignalR(options =>
 });
 builder.Services.AddInfrastructure(builder.Configuration);
 builder.Services.AddScoped<AuthService>();
+builder.Services.AddScoped<ClienteAuthService>();
 builder.Services.AddScoped<IEmpresaContext, EmpresaContext>();
 builder.Services.AddScoped<CarrinhoSessao>();
 builder.Services.AddScoped<LojaPublicaService>();

@@ -1,0 +1,89 @@
+@namespace SalgaFacil.Web.Components.Shared
+@using SalgaFacil.Web.Contracts.Pagamentos
+
+<div class="pix-admin-card" aria-live="polite">
+    <div class="pix-admin-header">
+        <h3 class="pix-admin-title">Pagamento Pix</h3>
+        @if (!Carregando && Pagamento is not null && string.IsNullOrEmpty(Erro))
+        {
+            <StatusPagamentoPixBadge Status="@Pagamento.Status" />
+        }
+    </div>
+
+    <p class="pix-admin-separacao">Status de pagamento (separado do status operacional do pedido)</p>
+
+    @if (Carregando)
+    {
+        <p class="pix-admin-msg">Carregando pagamento Pix...</p>
+    }
+    else if (!string.IsNullOrEmpty(Erro))
+    {
+        <p class="pix-admin-erro" role="alert">@Erro</p>
+    }
+    else if (Pagamento is null)
+    {
+        <p class="pix-admin-msg">Este pedido não possui pagamento Pix.</p>
+    }
+    else if (!Pagamento.Disponivel)
+    {
+        <p class="pix-admin-erro" role="status">
+            @(Pagamento.MensagemIndisponibilidade
+                ?? "Pagamento Pix indisponível no momento. Entre em contato com a loja.")
+        </p>
+    }
+    else
+    {
+        <dl class="pix-admin-dados">
+            <div>
+                <dt>Valor</dt>
+                <dd class="pix-admin-valor">@Pagamento.Valor.ToString("C", _ptBr)</dd>
+            </div>
+            <div>
+                <dt>Beneficiário</dt>
+                <dd>@(Pagamento.NomeBeneficiario ?? "—")</dd>
+            </div>
+            <div>
+                <dt>Chave</dt>
+                <dd class="pix-admin-chave">@(Pagamento.Chave ?? "—")</dd>
+            </div>
+        </dl>
+
+        @if (Pagamento.Status == StatusPagamentoPix.Pago)
+        {
+            <p class="pix-admin-ok" role="status">
+                Recebimento confirmado
+                @if (Pagamento.ConfirmadoEm is not null)
+                {
+                    <span> em @Pagamento.ConfirmadoEm.Value.ToLocalTime().ToString("dd/MM/yyyy HH:mm")</span>
+                }
+            </p>
+        }
+        else if (Pagamento.PodeConfirmar)
+        {
+            <button type="button"
+                    class="btn btn-primary pix-admin-confirmar"
+                    disabled="@Confirmando"
+                    @onclick="ConfirmarAsync">
+                @(Confirmando ? "Confirmando..." : "Confirmar recebimento Pix")
+            </button>
+            <p class="pix-admin-hint">Confirme somente após verificar o crédito na conta.</p>
+        }
+    }
+
+    @if (Pagamento?.Simulado == true)
+    {
+        <p class="pix-simulado" role="note">Dados simulados (Development)</p>
+    }
+</div>
+
+@code {
+    [Parameter] public PagamentoPixDto? Pagamento { get; set; }
+    [Parameter] public bool Carregando { get; set; }
+    [Parameter] public bool Confirmando { get; set; }
+    [Parameter] public string? Erro { get; set; }
+    [Parameter] public EventCallback OnConfirmar { get; set; }
+
+    private readonly System.Globalization.CultureInfo _ptBr = new("pt-BR");
+
+    private Task ConfirmarAsync() => OnConfirmar.InvokeAsync();
+}

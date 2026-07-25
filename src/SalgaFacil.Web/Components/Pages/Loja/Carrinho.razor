@@ -2,9 +2,10 @@
 @layout SalgaFacil.Web.Components.Layout.PublicLayout
 @inject LojaPublicaService Loja
 @inject CarrinhoSessao Sacola
-@inject NavigationManager Nav
+@inject ClienteAuthService ClienteAuth
+@inject IPagamentoPixService PagamentoPix
 
-<PageTitle>Carrinho — @(_empresa?.NomeFantasia ?? "Loja")</PageTitle>
+<PageTitle>Checkout — @(_empresa?.NomeFantasia ?? "Loja")</PageTitle>
 
 @if (_empresa is null)
 {
@@ -15,7 +16,7 @@ else
     <div class="loja-checkout">
         <a href="/loja/@Slug" class="btn btn-secondary">← Cardápio</a>
         <LojaNav Slug="@Slug" />
-        <h1>Seu pedido</h1>
+        <h1>@TituloEtapa</h1>
 
         @if (_carregandoCarrinho)
         {
@@ -25,103 +26,123 @@ else
         {
             <p class="loja-empty-msg">Carrinho vazio.</p>
         }
-        else if (_linhas.Count > 0)
+        else if (_etapa == EtapaCheckout.Resumo)
         {
             <div class="card" style="margin-bottom:16px">
                 <table class="data-table">
                     <thead><tr><th>Produto</th><th>Qtd</th><th>Preço</th><th>Total</th><th></th></tr></thead>
                     <tbody>
-                        @foreach (var l in _linhas)
+                        @foreach (var linha in _linhas)
                         {
                             <tr>
-                                <td>@l.Nome</td>
+                                <td>@linha.Nome</td>
                                 <td>
-                                    <button class="btn-icon" @onclick="() => Alterar(l.ProdutoId, -1)">−</button>
-                                    @l.Quantidade
-                                    <button class="btn-icon" @onclick="() => Alterar(l.ProdutoId, 1)">+</button>
+                                    <button class="btn-icon" @onclick="() => Alterar(linha.ProdutoId, -1)">−</button>
+                                    @linha.Quantidade
+                                    <button class="btn-icon" @onclick="() => Alterar(linha.ProdutoId, 1)">+</button>
                                 </td>
-                                <td>@l.Preco.ToString("C", _ptBr)</td>
-                                <td>@((l.Preco * l.Quantidade).ToString("C", _ptBr))</td>
-                                <td><button class="btn-icon" @onclick="() => Remover(l.ProdutoId)">🗑️</button></td>
+                                <td>@linha.Preco.ToString("C", _ptBr)</td>
+                                <td>@((linha.Preco * linha.Quantidade).ToString("C", _ptBr))</td>
+                                <td><button class="btn-icon" title="Remover" @onclick="() => Remover(linha.ProdutoId)">×</button></td>
                             </tr>
                         }
                     </tbody>
                 </table>
-                <p style="text-align:right;font-weight:700;margin-top:12px">Total: @_linhas.Sum(l => l.Preco * l.Quantidade).ToString("C", _ptBr)</p>
-                <p style="text-align:right;margin-top:8px">
-                    <button type="button" class="link-action" @onclick="EsvaziarCarrinho">Esvaziar carrinho</button>
-                </p>
+                <p style="text-align:right;font-weight:700;margin-top:12px">Total: @Total.ToString("C", _ptBr)</p>
+                <div style="display:flex;justify-content:flex-end;gap:8px;margin-top:14px;flex-wrap:wrap">
+                    <button type="button" class="btn btn-secondary" @onclick="EsvaziarCarrinho">Esvaziar</button>
+                    <button type="button" class="btn btn-primary" @onclick="ConfirmarCarrinho">Confirmar compra</button>
+                </div>
             </div>
+        }
+        else if (_etapa == EtapaCheckout.Identificacao)
+        {
+            <div class="card checkout-auth">
+                <p style="margin-bottom:16px">Para continuar com a compra, entre na sua conta ou faça seu cadastro.</p>
+                <div style="display:flex;gap:8px;margin-bottom:18px">
+                    <button type="button" class="btn @(!_modoCadastro ? "btn-primary" : "btn-secondary")" @onclick="() => TrocarModo(false)">Entrar</button>
+                    <button type="button" class="btn @(_modoCadastro ? "btn-primary" : "btn-secondary")" @onclick="() => TrocarModo(true)">Criar conta</button>
+                </div>
 
+                @if (!_modoCadastro)
+                {
+                    <div class="form-group"><label>E-mail</label><InputText type="email" class="form-control" @bind-Value="_login.Email" /></div>
+                    <div class="form-group"><label>Senha</label><InputText type="password" class="form-control" @bind-Value="_login.Senha" /></div>
+                    <button type="button" class="btn btn-primary" disabled="@_processando" @onclick="Entrar">@(_processando ? "Entrando..." : "Entrar e continuar")</button>
+                }
+                else
+                {
+                    <div class="form-group"><label>Nome</label><InputText class="form-control" @bind-Value="_cadastro.Nome" /></div>
+                    <div class="form-row">
+                        <div class="form-group"><label>E-mail</label><InputText type="email" class="form-control" @bind-Value="_cadastro.Email" /></div>
+                        <div class="form-group"><label>Telefone</label><InputText class="form-control" @bind-Value="_cadastro.Telefone" /></div>
+                    </div>
+                    <div class="form-row">
+                        <div class="form-group"><label>Senha</label><InputText type="password" class="form-control" @bind-Value="_cadastro.Senha" /></div>
+                        <div class="form-group"><label>Confirmar senha</label><InputText type="password" class="form-control" @bind-Value="_cadastro.Confirmacao" /></div>
+                    </div>
+                    <button type="button" class="btn btn-primary" disabled="@_processando" @onclick="Cadastrar">@(_processando ? "Cadastrando..." : "Cadastrar e continuar")</button>
+                }
+                @if (!string.IsNullOrWhiteSpace(_erro))
+                {
+                    <div class="login-error" style="margin-top:16px">@_erro</div>
+                }
+            </div>
+        }
+        else if (_etapa == EtapaCheckout.Pagamento)
+        {
             <div class="card" style="margin-bottom:16px">
-                <h2 style="font-size:16px;margin-bottom:12px">Seus dados</h2>
-                <div class="form-group">
-                    <label>Nome *</label>
-                    <InputText class="form-control" @bind-Value="_pedido.Nome" />
+                <div style="display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap">
+                    <div><strong>@ClienteAuth.ClienteAtual?.Nome</strong><br /><small>@ClienteAuth.ClienteAtual?.Email</small></div>
+                    <button type="button" class="btn btn-secondary" @onclick="TrocarConta">Trocar conta</button>
                 </div>
-                <div class="form-row">
-                    <div class="form-group">
-                        <label>Telefone</label>
-                        <InputText class="form-control" @bind-Value="_pedido.Telefone" />
-                    </div>
-                    <div class="form-group">
-                        <label>WhatsApp</label>
-                        <InputText class="form-control" @bind-Value="_pedido.WhatsApp" />
-                    </div>
-                </div>
-                <div class="form-group">
-                    <label>E-mail <span style="font-weight:400;color:var(--text-muted)">(opcional)</span></label>
-                    <InputText class="form-control" type="email" @bind-Value="_pedido.Email" placeholder="voce@exemplo.com" />
-                </div>
+            </div>
+            <div class="card" style="margin-bottom:16px">
+                <h2 style="font-size:16px;margin-bottom:12px">Recebimento do pedido</h2>
                 <div class="form-group">
                     <label><input type="radio" name="modo" checked="@(!_pedido.Entrega)" @onchange="() => _pedido.Entrega = false" /> Retirada</label>
                     <label style="margin-left:16px"><input type="radio" name="modo" checked="@_pedido.Entrega" @onchange="() => _pedido.Entrega = true" /> Entrega</label>
                 </div>
                 @if (_pedido.Entrega)
                 {
-                    <div class="form-group">
-                        <label>Endereço de entrega</label>
-                        <InputText class="form-control" @bind-Value="_pedido.EnderecoEntrega" />
-                    </div>
+                    <div class="form-group"><label>Endereço de entrega</label><InputText class="form-control" @bind-Value="_pedido.EnderecoEntrega" /></div>
                 }
-                <div class="form-group" style="margin-bottom:0">
-                    <label>Observações</label>
-                    <InputTextArea class="form-control" @bind-Value="_pedido.Observacoes" rows="2" />
-                </div>
+                <div class="form-group" style="margin-bottom:0"><label>Observações</label><InputTextArea class="form-control" @bind-Value="_pedido.Observacoes" rows="2" /></div>
             </div>
-
             <div class="card">
                 <h2 style="font-size:16px;margin-bottom:12px">Forma de pagamento</h2>
                 <div class="pm-pagamento-grid" style="margin-bottom:16px">
                     @foreach (var forma in FormasDisponiveis)
                     {
                         <button type="button" class="pm-pagamento-card @(_pedido.FormaPagamento == forma ? "active" : "")" @onclick="() => _pedido.FormaPagamento = forma">
-                            <span class="pm-pagamento-icone">@forma.Icone()</span>
-                            <span>@forma.Rotulo()</span>
+                            <span class="pm-pagamento-icone">@forma.Icone()</span><span>@forma.Rotulo()</span>
                         </button>
                     }
                 </div>
-                @if (!string.IsNullOrEmpty(_erro))
+                <p style="font-weight:700;margin-bottom:14px">Total: @Total.ToString("C", _ptBr)</p>
+                @if (!string.IsNullOrWhiteSpace(_erro))
                 {
                     <div class="login-error" style="margin-bottom:16px">@_erro</div>
                 }
-                <button class="btn btn-primary" disabled="@_enviando" @onclick="Enviar">@(_enviando ? "Enviando..." : "Confirmar pedido")</button>
+                <button type="button" class="btn btn-primary" disabled="@_processando" @onclick="FinalizarPedido">@(_processando ? "Finalizando..." : "Finalizar pedido")</button>
             </div>
         }
-
-        @if (_pedidoId > 0)
+        else if (_etapa == EtapaCheckout.Pix)
         {
-            <div class="card" style="margin-top:16px;padding:16px;border-left:4px solid var(--green)">
+            <div class="card" style="margin-bottom:16px;border-left:4px solid var(--green)">
+                <strong>Pedido #@_pedidoId criado.</strong> Agora faça o pagamento para concluir.
+            </div>
+            <PagamentoPixClienteCard Pagamento="@_pagamentoPix" Carregando="@_carregandoPix" Erro="@_erroPix" />
+            <div style="display:flex;gap:8px;margin-top:16px;flex-wrap:wrap">
+                <a class="btn btn-secondary" href="/loja/@Slug/meus-pedidos">Ver meus pedidos</a>
+                <a class="btn btn-secondary" href="/loja/@Slug">Voltar ao cardápio</a>
+            </div>
+        }
+        else if (_etapa == EtapaCheckout.Concluido)
+        {
+            <div class="card" style="border-left:4px solid var(--green)">
                 Pedido <strong>#@_pedidoId</strong> enviado com sucesso!
-                @if (_clienteJaExistia)
-                {
-                    <p style="margin-top:8px;color:var(--text-muted);font-size:13px">Encontramos seu cadastro. Seus dados foram utilizados neste pedido.</p>
-                }
                 <div style="margin-top:12px;display:flex;gap:8px;flex-wrap:wrap">
-                    @if (_linkWhatsApp is not null)
-                    {
-                        <a class="btn btn-primary" href="@_linkWhatsApp" target="_blank" rel="noopener">📱 Acompanhar pelo WhatsApp</a>
-                    }
                     <a class="btn btn-secondary" href="/loja/@Slug">Voltar ao cardápio</a>
                     <a class="btn btn-secondary" href="/loja/@Slug/meus-pedidos">Ver meus pedidos</a>
                 </div>
@@ -134,28 +155,37 @@ else
     [Parameter] public string Slug { get; set; } = "";
     private Empresa? _empresa;
     private List<Linha> _linhas = [];
-    private PedidoVisitanteDto _pedido = new();
-    private string? _erro;
-    private bool _enviando;
-    private int _pedidoId;
-    private bool _clienteJaExistia;
+    private PedidoClienteDto _pedido = new();
+    private LoginModel _login = new();
+    private CadastroModel _cadastro = new();
+    private EtapaCheckout _etapa = EtapaCheckout.Resumo;
+    private bool _modoCadastro;
+    private bool _processando;
     private bool _carregandoCarrinho = true;
-    private string? _linkWhatsApp;
+    private bool _carregandoPix;
+    private string? _erro;
+    private string? _erroPix;
+    private int _pedidoId;
+    private PagamentoPixDto? _pagamentoPix;
     private readonly System.Globalization.CultureInfo _ptBr = new("pt-BR");
     private static readonly FormaPagamento[] FormasDisponiveis =
         [FormaPagamento.Pix, FormaPagamento.Dinheiro, FormaPagamento.CartaoDebito, FormaPagamento.CartaoCredito];
 
-    protected override async Task OnInitializedAsync()
+    private decimal Total => _linhas.Sum(l => l.Preco * l.Quantidade);
+    private string TituloEtapa => _etapa switch
     {
-        _empresa = await Loja.ObterEmpresaPorSlugAsync(Slug);
-    }
+        EtapaCheckout.Resumo => "Seu carrinho",
+        EtapaCheckout.Identificacao => "Identificação",
+        EtapaCheckout.Pagamento => "Pagamento",
+        EtapaCheckout.Pix => "Pagamento Pix",
+        _ => "Pedido confirmado"
+    };
+
+    protected override async Task OnInitializedAsync() => _empresa = await Loja.ObterEmpresaPorSlugAsync(Slug);
 
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
-        if (!firstRender || _empresa == null) return;
-
-        // JS interop (localStorage) só funciona depois que o circuito está interativo —
-        // por isso o carrinho é carregado aqui, não em OnInitializedAsync.
+        if (!firstRender || _empresa is null) return;
         await Sacola.CarregarAsync(Slug);
         await MontarLinhas();
         _carregandoCarrinho = false;
@@ -165,24 +195,24 @@ else
     private async Task MontarLinhas()
     {
         var itens = Sacola.Obter(Slug);
-        if (_empresa == null || itens.Count == 0) { _linhas = []; return; }
+        if (_empresa is null || itens.Count == 0) { _linhas = []; return; }
         var produtos = await Loja.ListarProdutosAsync(_empresa.Id);
-        _linhas = itens
-            .Select(i =>
+        _linhas = itens.Select(i =>
+        {
+            var produto = produtos.FirstOrDefault(p => p.Id == i.ProdutoId);
+            return produto is null ? null : new Linha
             {
-                var p = produtos.FirstOrDefault(x => x.Id == i.ProdutoId);
-                return p == null ? null : new Linha { ProdutoId = p.Id, Nome = p.Nome, Preco = PrecificacaoProduto.PrecoUnitario(p, i.Quantidade), Quantidade = i.Quantidade };
-            })
-            .Where(l => l != null)
-            .Cast<Linha>()
-            .ToList();
+                ProdutoId = produto.Id, Nome = produto.Nome,
+                Preco = PrecificacaoProduto.PrecoUnitario(produto, i.Quantidade), Quantidade = i.Quantidade
+            };
+        }).Where(l => l is not null).Cast<Linha>().ToList();
     }
 
     private async Task Alterar(int produtoId, int delta)
     {
         var itens = Sacola.Obter(Slug);
         var item = itens.FirstOrDefault(i => i.ProdutoId == produtoId);
-        if (item == null) return;
+        if (item is null) return;
         item.Quantidade += delta;
         if (item.Quantidade <= 0) itens.Remove(item);
         await Sacola.DefinirAsync(Slug, itens);
@@ -191,8 +221,7 @@ else
 
     private async Task Remover(int produtoId)
     {
-        var itens = Sacola.Obter(Slug).Where(i => i.ProdutoId != produtoId).ToList();
-        await Sacola.DefinirAsync(Slug, itens);
+        await Sacola.DefinirAsync(Slug, Sacola.Obter(Slug).Where(i => i.ProdutoId != produtoId).ToList());
         await MontarLinhas();
     }
 
@@ -202,48 +231,105 @@ else
         _linhas = [];
     }
 
-    /// <summary>
-    /// Monta o link "https://wa.me/..." para o cliente falar com a loja sobre o pedido recém-criado.
-    /// Reaproveita TelefoneNormalizador (mesma normalização usada para Cliente) porque o formato
-    /// que o wa.me espera — dígitos puros com DDI — é exatamente o que ele já produz.
-    /// Retorna null se a loja não tiver WhatsApp cadastrado (Empresa.WhatsApp), caso em que o
-    /// botão simplesmente não aparece na tela de confirmação.
-    /// </summary>
-    private static string? MontarLinkWhatsApp(string? whatsappLoja, int pedidoId)
+    private void ConfirmarCarrinho()
     {
-        var numero = TelefoneNormalizador.Normalizar(whatsappLoja);
-        if (numero is null) return null;
-
-        var mensagem = Uri.EscapeDataString($"Olá! Acabei de fazer o pedido #{pedidoId:D4}.");
-        return $"https://wa.me/{numero}?text={mensagem}";
+        if (_empresa is null || _linhas.Count == 0) return;
+        _erro = null;
+        _etapa = ClienteAuth.EstaAutenticado(_empresa.Id) ? EtapaCheckout.Pagamento : EtapaCheckout.Identificacao;
     }
 
-    private async Task Enviar()
+    private void TrocarModo(bool cadastro)
     {
-        if (_empresa == null) return;
-        if (_pedido.FormaPagamento is null)
-        {
-            _erro = "Selecione a forma de pagamento.";
-            return;
-        }
+        _modoCadastro = cadastro;
+        _erro = null;
+    }
 
-        _enviando = true;
+    private async Task Entrar()
+    {
+        if (_empresa is null) return;
+        _processando = true;
+        _erro = null;
+        try
+        {
+            if (!await ClienteAuth.LoginAsync(_empresa.Id, _login.Email, _login.Senha))
+                _erro = "E-mail ou senha inválidos.";
+            else
+                _etapa = EtapaCheckout.Pagamento;
+        }
+        catch (Exception ex) { _erro = ex.Message; }
+        finally { _processando = false; }
+    }
+
+    private async Task Cadastrar()
+    {
+        if (_empresa is null) return;
+        if (_cadastro.Senha != _cadastro.Confirmacao) { _erro = "As senhas não conferem."; return; }
+        _processando = true;
+        _erro = null;
+        try
+        {
+            await ClienteAuth.CadastrarAsync(_empresa.Id, _cadastro.Nome, _cadastro.Email, _cadastro.Telefone, _cadastro.Senha);
+            _etapa = EtapaCheckout.Pagamento;
+        }
+        catch (Exception ex) { _erro = ex.Message; }
+        finally { _processando = false; }
+    }
+
+    private void TrocarConta()
+    {
+        ClienteAuth.Sair();
+        _login = new();
+        _erro = null;
+        _etapa = EtapaCheckout.Identificacao;
+    }
+
+    private async Task FinalizarPedido()
+    {
+        if (_empresa is null || ClienteAuth.ClienteAtual is null) return;
+        if (_pedido.FormaPagamento is null) { _erro = "Selecione a forma de pagamento."; return; }
+        if (_pedido.Entrega && string.IsNullOrWhiteSpace(_pedido.EnderecoEntrega)) { _erro = "Informe o endereço de entrega."; return; }
+
+        _processando = true;
         _erro = null;
         try
         {
             _pedido.Itens = Sacola.Obter(Slug).ToList();
-            var resultado = await Loja.CriarPedidoVisitanteAsync(_empresa.Id, _pedido);
-            _pedidoId = resultado.PedidoId;
-            _clienteJaExistia = resultado.ClienteJaExistia;
-            _linkWhatsApp = MontarLinkWhatsApp(_empresa.WhatsApp, resultado.PedidoId);
+            _pedidoId = await Loja.CriarPedidoClienteAsync(_empresa.Id, ClienteAuth.ClienteAtual.Id, _pedido);
             await Sacola.LimparAsync(Slug);
             _linhas = [];
+
+            if (_pedido.FormaPagamento == FormaPagamento.Pix)
+            {
+                _etapa = EtapaCheckout.Pix;
+                _carregandoPix = true;
+                try
+                {
+                    _pagamentoPix = await PagamentoPix.ObterParaClienteAsync(
+                        _empresa.Id, _pedidoId, ClienteAuth.ClienteAtual.Telefone);
+                }
+                catch (Exception ex) { _erroPix = ex.Message; }
+                finally { _carregandoPix = false; }
+            }
+            else
+            {
+                _etapa = EtapaCheckout.Concluido;
+            }
         }
         catch (Exception ex) { _erro = ex.Message; }
-        finally { _enviando = false; }
+        finally { _processando = false; }
     }
 
-    private class Linha
+    private enum EtapaCheckout { Resumo, Identificacao, Pagamento, Pix, Concluido }
+    private sealed class LoginModel { public string Email { get; set; } = ""; public string Senha { get; set; } = ""; }
+    private sealed class CadastroModel
+    {
+        public string Nome { get; set; } = "";
+        public string Email { get; set; } = "";
+        public string Telefone { get; set; } = "";
+        public string Senha { get; set; } = "";
+        public string Confirmacao { get; set; } = "";
+    }
+    private sealed class Linha
     {
         public int ProdutoId { get; set; }
         public string Nome { get; set; } = "";

@@ -2,6 +2,7 @@
 @inject EmpresaService Empresa
 @inject AuthService Auth
 @inject NavigationManager Nav
+@inject IPagamentoPixService PagamentoPix
 
 <PageTitle>Configurações — ConsuCruz</PageTitle>
 
@@ -80,6 +81,16 @@
     </div>
 
     <div class="card form-card" style="margin-top:16px;max-width:720px">
+        <div class="card-title">Pix</div>
+        <ConfiguracaoPixSection Model="_pixConfig"
+                                Carregando="_pixCarregando"
+                                Salvando="_pixSalvando"
+                                Mensagem="@_pixMsg"
+                                Erro="@_pixErro"
+                                OnSalvar="SalvarPixAsync" />
+    </div>
+
+    <div class="card form-card" style="margin-top:16px;max-width:720px">
         <div class="card-title">Conta</div>
         <p style="font-size:14px;margin-bottom:16px">
             Logado como <strong>@Auth.UsuarioAtual?.Nome</strong> (@Auth.UsuarioAtual?.Email)<br />
@@ -92,11 +103,36 @@
 @code {
     private Empresa? _empresa;
     private string? _msg;
+    private ConfiguracaoPixDto? _pixConfig;
+    private bool _pixCarregando = true;
+    private bool _pixSalvando;
+    private string? _pixMsg;
+    private string? _pixErro;
 
     protected override async Task OnInitializedAsync()
     {
         if (!Auth.EstaAutenticado) return;
         _empresa = await Empresa.ObterAsync();
+        await CarregarPixAsync();
+    }
+
+    private async Task CarregarPixAsync()
+    {
+        _pixCarregando = true;
+        _pixErro = null;
+        try
+        {
+            _pixConfig = await PagamentoPix.ObterConfiguracaoAsync();
+        }
+        catch (Exception ex)
+        {
+            _pixErro = ex.Message;
+            _pixConfig = null;
+        }
+        finally
+        {
+            _pixCarregando = false;
+        }
     }
 
     private async Task SalvarEmpresa()
@@ -113,6 +149,28 @@
             }
         }
         catch (Exception ex) { _msg = ex.Message; }
+    }
+
+    private async Task SalvarPixAsync()
+    {
+        if (_pixConfig is null) return;
+        _pixSalvando = true;
+        _pixMsg = null;
+        _pixErro = null;
+        try
+        {
+            await PagamentoPix.SalvarConfiguracaoAsync(_pixConfig);
+            _pixConfig = await PagamentoPix.ObterConfiguracaoAsync();
+            _pixMsg = "Configuração Pix salva.";
+        }
+        catch (Exception ex)
+        {
+            _pixErro = ex.Message;
+        }
+        finally
+        {
+            _pixSalvando = false;
+        }
     }
 
     private async Task Sair()

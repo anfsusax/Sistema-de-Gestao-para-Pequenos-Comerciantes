@@ -1,6 +1,7 @@
 @page "/pedidos/{Id:int}"
 @inject PedidoService Pedidos
 @inject NavigationManager Nav
+@inject IPagamentoPixService PagamentoPix
 
 <PageTitle>Pedido #@Id — SalgadosPro</PageTitle>
 
@@ -18,7 +19,7 @@ else
         <a href="/pedidos" class="btn btn-secondary">← Voltar</a>
     </div>
 
-    <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px">
+    <div class="pedido-detalhe-grid">
         <div class="card">
             <div class="card-title">Itens do Pedido</div>
             <table class="data-table">
@@ -38,10 +39,16 @@ else
                 </tbody>
             </table>
             <div style="margin-top:16px;font-size:18px;font-weight:800">Total: @_pedido.Total.ToString("C", _ptBr)</div>
+            @if (_pedido.FormaPagamento is not null)
+            {
+                <p style="margin-top:8px;color:var(--text-muted);font-size:13px">
+                    Forma de pagamento: @_pedido.FormaPagamento.Value.Rotulo()
+                </p>
+            }
         </div>
 
         <div class="card">
-            <div class="card-title">Status</div>
+            <div class="card-title">Status operacional</div>
             <p style="margin-bottom:16px"><StatusBadge Status="@_pedido.Status" /></p>
             <div style="display:flex;flex-direction:column;gap:10px">
                 @if (_pedido.Status == StatusPedido.Aguardando)
@@ -76,6 +83,15 @@ else
                     </p>
                 }
             </div>
+
+            @if (_pedido.FormaPagamento == FormaPagamento.Pix)
+            {
+                <ConfirmacaoPagamentoPixCard Pagamento="_pixPagamento"
+                                             Carregando="_pixCarregando"
+                                             Confirmando="_pixConfirmando"
+                                             Erro="@_pixErro"
+                                             OnConfirmar="ConfirmarPixAsync" />
+            }
         </div>
     </div>
 }
@@ -83,13 +99,62 @@ else
 @code {
     [Parameter] public int Id { get; set; }
     private Pedido? _pedido;
+    private PagamentoPixDto? _pixPagamento;
+    private bool _pixCarregando;
+    private bool _pixConfirmando;
+    private string? _pixErro;
     private readonly System.Globalization.CultureInfo _ptBr = new("pt-BR");
 
-    protected override async Task OnInitializedAsync() => _pedido = await Pedidos.ObterAsync(Id);
+    protected override async Task OnInitializedAsync()
+    {
+        _pedido = await Pedidos.ObterAsync(Id);
+        await CarregarPixAsync();
+    }
+
+    private async Task CarregarPixAsync()
+    {
+        if (_pedido is null || _pedido.FormaPagamento != FormaPagamento.Pix)
+            return;
+
+        _pixCarregando = true;
+        _pixErro = null;
+        try
+        {
+            _pixPagamento = await PagamentoPix.ObterParaAdministracaoAsync(Id);
+        }
+        catch (Exception ex)
+        {
+            _pixErro = ex.Message;
+            _pixPagamento = null;
+        }
+        finally
+        {
+            _pixCarregando = false;
+        }
+    }
 
     private async Task MudarStatus(StatusPedido status)
     {
         await Pedidos.AtualizarStatusAsync(Id, status);
         _pedido = await Pedidos.ObterAsync(Id);
+    }
+
+    private async Task ConfirmarPixAsync()
+    {
+        _pixConfirmando = true;
+        _pixErro = null;
+        try
+        {
+            await PagamentoPix.ConfirmarRecebimentoAsync(Id);
+            _pixPagamento = await PagamentoPix.ObterParaAdministracaoAsync(Id);
+        }
+        catch (Exception ex)
+        {
+            _pixErro = ex.Message;
+        }
+        finally
+        {
+            _pixConfirmando = false;
+        }
     }
 }
