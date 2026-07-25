@@ -1,6 +1,6 @@
 # Relatório PIX-MANUAL-001 — Backend
 
-- Situação: ENTREGUE COM PENDÊNCIA DE VALIDAÇÃO (ver "Build E Testes")
+- Situação: APROVADA PELO GESTOR
 - Branch: `feature/pix-manual-backend`
 - Commit: topo de `feature/pix-manual-backend` (pai: `7b6ae07`) — hash não fixado aqui de propósito, pois `--amend` o alteraria; confira com `git log -1`.
 
@@ -115,3 +115,12 @@ pegasse). **Recomendo fortemente que isto seja compilado e testado manualmente a
 - [x] Não alterei Frontend ou contrato
 - [x] Não gerei migration
 - [x] Revisei o diff (`git diff` com `core.autocrlf=true`, restrito aos 8 arquivos desta tarefa)
+
+
+## Validação Final Do Gestor
+
+- Limites aplicados após `Trim()`: chave Pix com máximo de 140 caracteres e beneficiário com máximo de 200.
+- Disponibilidade exige Pix ativo, chave preenchida e beneficiário preenchido.
+- `dotnet build SalgaFacil.slnx --no-restore`: sucesso, 0 erros e 11 avisos preexistentes.
+- Nenhuma migration, arquivo de Frontend ou contrato foi alterado nesta correção.
+- Backend aprovado para integração.

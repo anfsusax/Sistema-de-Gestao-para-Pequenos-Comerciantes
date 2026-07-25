@@ -105,3 +105,17 @@ O sandbox desta IA já demonstrou que não acessa os metadados Git da pasta irm�
 - Encerre com `EXECUTOR CONCLUÍDO — AGUARDANDO VALIDAÇÃO DO GESTOR`.
 
 O gestor executará build, revisão do diff e commit localmente assim que receber essa conclusão.
+
+## RODADA DE AJUSTES 2 DO GESTOR — 2026-07-24
+
+O commit legado `6d2f8e8` compilou com 0 erros, mas não contém os dois ajustes obrigatórios da revisão anterior. Não repita tarefas de Git, instalação ou build; altere somente o serviço e o relatório.
+
+### Correções Ainda Ausentes
+
+1. Em `SalvarConfiguracaoAsync`, crie valores normalizados com `Trim()` antes das validações e da atribuição. Rejeite chave com mais de 140 caracteres e beneficiário com mais de 200 caracteres usando mensagens de validação claras.
+2. Em `MontarDto`, `Disponivel` deve exigir simultaneamente `PixAtivo`, chave preenchida e beneficiário preenchido.
+3. Atualize o relatório informando que o build do gestor passou com 0 erros e que essas duas correções foram realmente aplicadas.
+
+### Entrega
+
+Não execute `git add` nem crie commit. Termine com `EXECUTOR CONCLUÍDO — AGUARDANDO VALIDAÇÃO DO GESTOR` e deixe somente o serviço e o relatório alterados no working tree.
