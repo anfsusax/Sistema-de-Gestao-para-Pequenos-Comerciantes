@@ -7,7 +7,15 @@
 <div class="page-header">
     <div>
         <h1>Pedidos</h1>
-        <p class="subtitle">@_lista.Count(p => p.Status is StatusPedido.Aguardando or StatusPedido.EmProducao or StatusPedido.Pronto) pedidos ativos</p>
+        <p class="subtitle">
+            @_lista.Count(p => p.Status is StatusPedido.Aguardando or StatusPedido.EmProducao or StatusPedido.Pronto) pedidos ativos
+            @if (_pendentesPix > 0)
+            {
+                <span class="pedidos-pix-pendente-chip" title="Comprovantes Pix aguardando conferência">
+                    ● @_pendentesPix comprovante@(_pendentesPix == 1 ? "" : "s") Pix pendente@(_pendentesPix == 1 ? "" : "s")
+                </span>
+            }
+        </p>
     </div>
     <a href="/pedidos/novo" class="btn btn-primary">+ Novo Pedido</a>
 </div>
@@ -52,7 +60,13 @@
                     <td>@p.Data.ToString("dd/MM/yyyy")</td>
                     <td>@ContarSalgados(p)</td>
                     <td class="valor">@p.Total.ToString("C", _ptBr)</td>
-                    <td><StatusBadge Status="@p.Status" /></td>
+                    <td>
+                        <StatusBadge Status="@p.Status" />
+                        @if (TemComprovantePendente(p))
+                        {
+                            <span class="pedidos-pix-pendente-dot" title="Comprovante Pix aguardando conferência">●</span>
+                        }
+                    </td>
                     <td>
                         <button class="btn-icon" title="Ver detalhe" @onclick="() => VerDetalhe(p.Id)">👁️</button>
                     </td>
@@ -89,4 +103,12 @@
     private void VerDetalhe(int id) => Nav.NavigateTo($"/pedidos/{id}");
 
     private int ContarSalgados(Pedido p) => p.Itens.Sum(i => i.Quantidade);
+
+    // Pedido já carrega FormaPagamento/StatusPagamento como propriedades escalares — não precisa
+    // de chamada extra ao serviço Pix só para saber se há comprovante pendente de conferência.
+    private static bool TemComprovantePendente(Pedido p) =>
+        p.FormaPagamento == FormaPagamento.Pix &&
+        p.StatusPagamento is StatusPagamento.ComprovanteEnviado or StatusPagamento.EmAnalise;
+
+    private int _pendentesPix => _lista.Count(TemComprovantePendente);
 }

@@ -193,6 +193,11 @@ public class LojaPublicaService(SalgaFacilDbContext db, ClienteService clienteSe
     /// (mesma normalização e mesmo fallback de auto-cura usados no checkout). Retorna lista
     /// vazia se o telefone não corresponder a nenhum cliente — nunca lança erro nesse caso,
     /// para não expor se um telefone está ou não cadastrado.
+    ///
+    /// PIX-MANUAL-002: não é mais usado por MeusPedidos.razor (que agora exige login via
+    /// ClienteAuthService — ver <see cref="ListarPedidosDoClienteAsync"/> — porque telefone sem
+    /// senha não é autorização suficiente para expor comprovante/QR Pix). Mantido por
+    /// compatibilidade caso outro fluxo público ainda dependa dele.
     /// </summary>
     public async Task<List<Pedido>> ListarPedidosPorTelefoneAsync(int empresaId, string? telefone)
     {
@@ -206,6 +211,19 @@ public class LojaPublicaService(SalgaFacilDbContext db, ClienteService clienteSe
             .OrderByDescending(p => p.Data)
             .ToListAsync();
     }
+
+    /// <summary>
+    /// Lista os pedidos (com itens) do cliente AUTENTICADO (ClienteAuthService), do mais recente
+    /// para o mais antigo. Usado por MeusPedidos.razor (PIX-MANUAL-002) — a autorização real é
+    /// o <paramref name="clienteId"/> vir de uma sessão de login válida (e-mail+senha), não de
+    /// um telefone digitado sem prova de posse.
+    /// </summary>
+    public Task<List<Pedido>> ListarPedidosDoClienteAsync(int empresaId, int clienteId) =>
+        db.Pedidos
+            .Include(p => p.Itens)
+            .Where(p => p.ClienteId == clienteId && p.EmpresaId == empresaId)
+            .OrderByDescending(p => p.Data)
+            .ToListAsync();
 }
 
 public class PedidoVisitanteDto

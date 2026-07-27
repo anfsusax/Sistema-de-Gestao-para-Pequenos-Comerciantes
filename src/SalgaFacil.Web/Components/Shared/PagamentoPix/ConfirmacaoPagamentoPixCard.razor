@@ -1,9 +1,15 @@
 @namespace SalgaFacil.Web.Components.Shared
 @using SalgaFacil.Web.Contracts.Pagamentos
 
-<div class="pix-admin-card" aria-live="polite">
+<div class="pix-admin-card @(TemComprovantePendente ? "pix-admin-card-pendente" : "")" aria-live="polite">
     <div class="pix-admin-header">
-        <h3 class="pix-admin-title">Pagamento Pix</h3>
+        <h3 class="pix-admin-title">
+            Pagamento Pix
+            @if (TemComprovantePendente)
+            {
+                <span class="pix-admin-alerta" title="Comprovante aguardando conferência">●</span>
+            }
+        </h3>
         @if (!Carregando && Pagamento is not null && string.IsNullOrEmpty(Erro))
         {
             <StatusPagamentoPixBadge Status="@Pagamento.Status" />
@@ -22,7 +28,9 @@
     }
     else if (Pagamento is null)
     {
-        <p class="pix-admin-msg">Este pedido não possui pagamento Pix.</p>
+        <p class="pix-admin-erro" role="status">
+            Não foi possível carregar o pagamento Pix.
+        </p>
     }
     else if (!Pagamento.Disponivel)
     {
@@ -48,25 +56,98 @@
             </div>
         </dl>
 
+        @if (Pagamento.Status == StatusPagamentoPix.Rejeitado && !string.IsNullOrWhiteSpace(Pagamento.ComprovanteMotivoRejeicao))
+        {
+            <p class="pix-admin-rejeitado-info">
+                <strong>Motivo da rejeição:</strong> @Pagamento.ComprovanteMotivoRejeicao
+            </p>
+        }
+
+        @if (Pagamento.TemComprovante)
+        {
+            <div class="pix-admin-comprovante">
+                <div>
+                    <strong>Comprovante:</strong> @(Pagamento.ComprovanteNomeArquivo ?? "arquivo")
+                    @if (Pagamento.ComprovanteEnviadoEm is not null)
+                    {
+                        <span class="pix-admin-meta"> — enviado em @Pagamento.ComprovanteEnviadoEm.Value.ToLocalTime().ToString("dd/MM/yyyy HH:mm")</span>
+                    }
+                </div>
+                <button type="button" class="btn btn-secondary" disabled="@VendoComprovante" @onclick="VerComprovanteAsync">
+                    @(VendoComprovante ? "Abrindo..." : "Ver / baixar comprovante")
+                </button>
+                @if (!string.IsNullOrEmpty(ErroComprovante))
+                {
+                    <p class="pix-admin-erro" role="alert">@ErroComprovante</p>
+                }
+            </div>
+        }
+        @if (Pagamento.ComprovanteRevisadoPorNome is not null && Pagamento.Status != StatusPagamentoPix.Aguardando)
+        {
+            <p class="pix-admin-meta">
+                Última revisão por @Pagamento.ComprovanteRevisadoPorNome
+                @if (Pagamento.ComprovanteRevisadoEm is not null)
+                {
+                    <span> em @Pagamento.ComprovanteRevisadoEm.Value.ToLocalTime().ToString("dd/MM/yyyy HH:mm")</span>
+                }
+            </p>
+        }
+
         @if (Pagamento.Status == StatusPagamentoPix.Pago)
         {
             <p class="pix-admin-ok" role="status">
                 Recebimento confirmado
+                @if (Pagamento.ConfirmadoPorNome is not null)
+                {
+                    <span> por @Pagamento.ConfirmadoPorNome</span>
+                }
                 @if (Pagamento.ConfirmadoEm is not null)
                 {
                     <span> em @Pagamento.ConfirmadoEm.Value.ToLocalTime().ToString("dd/MM/yyyy HH:mm")</span>
                 }
             </p>
         }
-        else if (Pagamento.PodeConfirmar)
+        else
         {
-            <button type="button"
-                    class="btn btn-primary pix-admin-confirmar"
-                    disabled="@Confirmando"
-                    @onclick="ConfirmarAsync">
-                @(Confirmando ? "Confirmando..." : "Confirmar recebimento Pix")
-            </button>
-            <p class="pix-admin-hint">Confirme somente após verificar o crédito na conta.</p>
+            <div class="pix-admin-acoes">
+                @if (Pagamento.Status == StatusPagamentoPix.ComprovanteEnviado)
+                {
+                    <button type="button" class="btn btn-secondary" disabled="@MarcandoEmAnalise" @onclick="MarcarEmAnaliseAsync">
+                        @(MarcandoEmAnalise ? "Marcando..." : "Marcar em análise")
+                    </button>
+                }
+
+                @if (Pagamento.PodeConfirmar)
+                {
+                    <button type="button" class="btn btn-primary pix-admin-confirmar" disabled="@Confirmando" @onclick="ConfirmarAsync">
+                        @(Confirmando ? "Confirmando..." : "Confirmar recebimento Pix")
+                    </button>
+                }
+
+                @if (Pagamento.Status is StatusPagamentoPix.ComprovanteEnviado or StatusPagamentoPix.EmAnalise)
+                {
+                    @if (!_mostrarRejeicao)
+                    {
+                        <button type="button" class="btn btn-secondary pix-admin-rejeitar-abrir" @onclick="() => _mostrarRejeicao = true">
+                            Rejeitar comprovante
+                        </button>
+                    }
+                    else
+                    {
+                        <div class="pix-admin-rejeicao-form">
+                            <label for="@_motivoId">Motivo da rejeição</label>
+                            <textarea id="@_motivoId" class="form-control" rows="2" maxlength="500" @bind="_motivoRejeicao"></textarea>
+                            <div class="pix-admin-rejeicao-botoes">
+                                <button type="button" class="btn btn-secondary" disabled="@Rejeitando" @onclick="() => _mostrarRejeicao = false">Cancelar</button>
+                                <button type="button" class="btn btn-danger" disabled="@(Rejeitando || string.IsNullOrWhiteSpace(_motivoRejeicao))" @onclick="RejeitarAsync">
+                                    @(Rejeitando ? "Rejeitando..." : "Confirmar rejeição")
+                                </button>
+                            </div>
+                        </div>
+                    }
+                }
+            </div>
+            <p class="pix-admin-hint">Confirme somente após verificar o crédito na conta da loja.</p>
         }
     }
 
@@ -80,10 +161,41 @@
     [Parameter] public PagamentoPixDto? Pagamento { get; set; }
     [Parameter] public bool Carregando { get; set; }
     [Parameter] public bool Confirmando { get; set; }
+    [Parameter] public bool MarcandoEmAnalise { get; set; }
+    [Parameter] public bool Rejeitando { get; set; }
+    [Parameter] public bool VendoComprovante { get; set; }
     [Parameter] public string? Erro { get; set; }
+    [Parameter] public string? ErroComprovante { get; set; }
     [Parameter] public EventCallback OnConfirmar { get; set; }
+    [Parameter] public EventCallback OnMarcarEmAnalise { get; set; }
+    [Parameter] public EventCallback OnVerComprovante { get; set; }
+    [Parameter] public EventCallback<string> OnRejeitar { get; set; }
 
     private readonly System.Globalization.CultureInfo _ptBr = new("pt-BR");
+    private readonly string _motivoId = $"pix-motivo-{Guid.NewGuid():N}";
+    private bool _mostrarRejeicao;
+    private string _motivoRejeicao = "";
+
+    private bool TemComprovantePendente =>
+        Pagamento is { Status: StatusPagamentoPix.ComprovanteEnviado or StatusPagamentoPix.EmAnalise };
+
+    protected override void OnParametersSet()
+    {
+        // Se a rejeição foi concluída (status mudou), fecha o formulário e limpa o motivo digitado.
+        if (Pagamento?.Status is not (StatusPagamentoPix.ComprovanteEnviado or StatusPagamentoPix.EmAnalise))
+        {
+            _mostrarRejeicao = false;
+            _motivoRejeicao = "";
+        }
+    }
 
     private Task ConfirmarAsync() => OnConfirmar.InvokeAsync();
+    private Task MarcarEmAnaliseAsync() => OnMarcarEmAnalise.InvokeAsync();
+    private Task VerComprovanteAsync() => OnVerComprovante.InvokeAsync();
+
+    private async Task RejeitarAsync()
+    {
+        if (string.IsNullOrWhiteSpace(_motivoRejeicao)) return;
+        await OnRejeitar.InvokeAsync(_motivoRejeicao.Trim());
+    }
 }

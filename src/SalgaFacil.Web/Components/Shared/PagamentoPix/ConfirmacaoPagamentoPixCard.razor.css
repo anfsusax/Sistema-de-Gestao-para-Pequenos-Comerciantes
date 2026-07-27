@@ -83,6 +83,75 @@
     color: var(--green-text);
 }
 
+.pix-admin-card-pendente {
+    border-color: #f59e0b;
+    box-shadow: 0 0 0 1px #f59e0b inset;
+}
+
+.pix-admin-alerta {
+    color: #f59e0b;
+    font-size: 11px;
+    margin-left: 6px;
+    vertical-align: middle;
+}
+
+.pix-admin-meta {
+    color: var(--text-muted);
+    font-size: 12px;
+}
+
+.pix-admin-rejeitado-info {
+    margin: 0 0 12px;
+    padding: 8px 10px;
+    border-radius: 8px;
+    background: #fee2e2;
+    color: #b91c1c;
+    font-size: 13px;
+}
+
+.pix-admin-comprovante {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 8px;
+    margin: 0 0 12px;
+    padding: 10px 12px;
+    border-radius: 8px;
+    border: 1px dashed var(--border);
+    font-size: 13px;
+}
+
+.pix-admin-acoes {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    margin-top: 4px;
+}
+
+.pix-admin-rejeitar-abrir {
+    width: 100%;
+}
+
+.pix-admin-rejeicao-form {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    padding: 10px;
+    border-radius: 8px;
+    background: var(--pm-cinza, #f7f7f7);
+}
+
+.pix-admin-rejeicao-form label {
+    font-size: 12px;
+    font-weight: 600;
+}
+
+.pix-admin-rejeicao-botoes {
+    display: flex;
+    gap: 8px;
+    justify-content: flex-end;
+}
+
 .pix-simulado {
     margin: 12px 0 0;
     padding: 6px 10px;

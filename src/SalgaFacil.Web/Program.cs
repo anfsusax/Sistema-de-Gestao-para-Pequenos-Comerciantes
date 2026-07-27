@@ -31,6 +31,7 @@ builder.Services.AddScoped<CaixaService>();
 builder.Services.AddScoped<DashboardService>();
 builder.Services.AddScoped<CustosService>();
 builder.Services.AddScoped<EmpresaService>();
+builder.Services.AddScoped<ComprovanteArmazenamentoService>();
 builder.Services.AddScoped<IPagamentoPixService, PagamentoPixService>();
 
 var app = builder.Build();

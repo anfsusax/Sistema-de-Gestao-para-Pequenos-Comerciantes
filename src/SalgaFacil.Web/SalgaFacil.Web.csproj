@@ -9,6 +9,10 @@
       <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
       <PrivateAssets>all</PrivateAssets>
     </PackageReference>
+    <!-- PIX-MANUAL-002: só gera a imagem PNG do QR Code a partir do texto do payload Pix
+         (SalgaFacil.Domain.Services.PixPayloadGerador) — não fala com nenhum serviço externo
+         nem gateway de pagamento, equivalente a uma lib de geração de código de barras. -->
+    <PackageReference Include="QRCoder" Version="1.6.0" />
   </ItemGroup>
 
   <PropertyGroup>

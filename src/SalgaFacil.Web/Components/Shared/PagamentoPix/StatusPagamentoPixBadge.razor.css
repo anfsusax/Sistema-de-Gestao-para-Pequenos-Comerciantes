@@ -18,3 +18,14 @@
     background: var(--green-light);
     color: var(--green-text);
 }
+
+.pix-status-enviado,
+.pix-status-analise {
+    background: var(--yellow-light);
+    color: var(--yellow-text);
+}
+
+.pix-status-rejeitado {
+    background: #fee2e2;
+    color: #b91c1c;
+}

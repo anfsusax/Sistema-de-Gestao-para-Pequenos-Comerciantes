@@ -137,7 +137,8 @@ else
             <div class="card" style="margin-bottom:16px;border-left:4px solid var(--green)">
                 <strong>Pedido #@_pedidoId criado.</strong> Agora faça o pagamento para concluir.
             </div>
-            <PagamentoPixClienteCard Pagamento="@_pagamentoPix" Carregando="@_carregandoPix" Erro="@_erroPix" />
+            <PagamentoPixClienteCard Pagamento="@_pagamentoPix" Carregando="@_carregandoPix" Erro="@_erroPix"
+                                      WhatsAppLink="@_whatsAppLink" OnEnviarComprovante="EnviarComprovanteAsync" />
             <div style="display:flex;gap:8px;margin-top:16px;flex-wrap:wrap">
                 <a class="btn btn-secondary" href="/loja/@Slug/meus-pedidos">Ver meus pedidos</a>
                 <a class="btn btn-secondary" href="/loja/@Slug">Voltar ao cardápio</a>
@@ -172,6 +173,7 @@ else
     private string? _erroPix;
     private int _pedidoId;
     private PagamentoPixDto? _pagamentoPix;
+    private string? _whatsAppLink;
     private readonly System.Globalization.CultureInfo _ptBr = new("pt-BR");
     private static readonly FormaPagamento[] FormasDisponiveis =
         [FormaPagamento.Pix, FormaPagamento.Dinheiro, FormaPagamento.CartaoDebito, FormaPagamento.CartaoCredito];
@@ -338,7 +340,8 @@ else
                 try
                 {
                     _pagamentoPix = await PagamentoPix.ObterParaClienteAsync(
-                        _empresa.Id, _pedidoId, ClienteAuth.ClienteAtual.Telefone);
+                        _empresa.Id, _pedidoId, ClienteAuth.ClienteAtual.Id);
+                    _whatsAppLink = WhatsAppLinkBuilder.MontarLinkPedido(_empresa.WhatsApp, _pedidoId);
                 }
                 catch (Exception ex) { _erroPix = ex.Message; }
                 finally { _carregandoPix = false; }
@@ -350,6 +353,17 @@ else
         }
         catch (Exception ex) { _erro = ex.Message; }
         finally { _processando = false; }
+    }
+
+    private async Task EnviarComprovanteAsync((byte[] Conteudo, string NomeArquivo, string ContentType) arquivo)
+    {
+        if (_empresa is null || ClienteAuth.ClienteAtual is null) return;
+
+        // Deixa a exceção subir para o card (PagamentoPixClienteCard.EnviarArquivoAsync já trata
+        // InvalidOperationException como mensagem de negócio exibível ao cliente).
+        _pagamentoPix = await PagamentoPix.EnviarComprovanteAsync(
+            _empresa.Id, _pedidoId, ClienteAuth.ClienteAtual.Id,
+            arquivo.Conteudo, arquivo.NomeArquivo, arquivo.ContentType);
     }
 
     private enum EtapaCheckout { Resumo, Identificacao, Pagamento, Pix, Concluido }

@@ -2,6 +2,7 @@
 @layout SalgaFacil.Web.Components.Layout.PublicLayout
 @inject LojaPublicaService Loja
 @inject CarrinhoSessao Carrinho
+@inject ClienteAuthService ClienteAuth
 @inject IPagamentoPixService PagamentoPix
 
 <PageTitle>Meus pedidos — @(_empresa?.NomeFantasia ?? "Loja")</PageTitle>
@@ -20,66 +21,102 @@ else
         <a href="/loja/@Slug" class="btn btn-secondary">← Cardápio</a>
         <LojaNav Slug="@Slug" />
         <h1>Meus pedidos</h1>
-        <p class="loja-desc" style="margin-bottom:16px">Informe o telefone usado no pedido para ver o histórico.</p>
 
-        <div class="card" style="margin-bottom:16px">
-            <div style="display:flex;gap:16px;align-items:flex-end;flex-wrap:wrap">
-                <div class="form-group" style="flex:1">
-                    <label>Telefone</label>
-                    <input class="form-control" @bind="_telefone" @bind:event="oninput" placeholder="(11) 99999-9999" @onkeyup="OnKeyUp" />
+        @if (!ClienteAuth.EstaAutenticado(_empresa.Id))
+        {
+            <div class="card checkout-auth">
+                <p style="margin-bottom:16px">
+                    Para ver seus pedidos (e acompanhar o pagamento Pix, comprovante e status),
+                    entre na sua conta ou faça seu cadastro.
+                </p>
+                <div style="display:flex;gap:8px;margin-bottom:18px">
+                    <button type="button" class="btn @(!_modoCadastro ? "btn-primary" : "btn-secondary")" @onclick="() => TrocarModo(false)">Entrar</button>
+                    <button type="button" class="btn @(_modoCadastro ? "btn-primary" : "btn-secondary")" @onclick="() => TrocarModo(true)">Criar conta</button>
                 </div>
-                <button class="btn btn-primary" disabled="@_buscando" @onclick="Buscar">@(_buscando ? "Buscando..." : "Buscar")</button>
-            </div>
-            @if (_erro is not null)
-            {
-                <p class="qty-erro">@_erro</p>
-            }
-        </div>
 
-        @if (_buscou && _pedidos.Count == 0)
-        {
-            <p class="loja-empty-msg">Nenhum pedido encontrado para esse telefone.</p>
-        }
-        else if (_pedidos.Count > 0)
-        {
-            @foreach (var p in _pedidos)
-            {
-                <div class="card" style="margin-bottom:16px;padding:16px">
-                    <div class="card-header-row">
-                        <div>
-                            <strong>Pedido #@p.Id</strong>
-                            <span style="color:var(--text-muted);font-size:13px;margin-left:8px">@p.Data.ToLocalTime().ToString("dd/MM/yyyy HH:mm")</span>
-                        </div>
-                        <StatusBadge Status="@p.Status" />
+                @if (!_modoCadastro)
+                {
+                    <div class="form-group"><label>E-mail</label><InputText type="email" class="form-control" @bind-Value="_login.Email" /></div>
+                    <div class="form-group"><label>Senha</label><InputText type="password" class="form-control" @bind-Value="_login.Senha" /></div>
+                    <button type="button" class="btn btn-primary" disabled="@_processando" @onclick="Entrar">@(_processando ? "Entrando..." : "Entrar")</button>
+                }
+                else
+                {
+                    <div class="form-group"><label>Nome</label><InputText class="form-control" @bind-Value="_cadastro.Nome" /></div>
+                    <div class="form-row">
+                        <div class="form-group"><label>E-mail</label><InputText type="email" class="form-control" @bind-Value="_cadastro.Email" /></div>
+                        <div class="form-group"><label>Telefone</label><InputText class="form-control" @bind-Value="_cadastro.Telefone" /></div>
                     </div>
-                    @if (p.FormaPagamento is not null)
-                    {
-                        <p style="color:var(--text-muted);font-size:13px;margin-top:4px">Pagamento: @p.FormaPagamento.Value.Rotulo()</p>
-                    }
-                    <table class="data-table" style="margin-top:10px">
-                        <thead><tr><th>Item</th><th>Qtd</th><th>Preço</th><th>Total</th></tr></thead>
-                        <tbody>
-                            @foreach (var item in p.Itens)
-                            {
-                                <tr>
-                                    <td>@item.Descricao</td>
-                                    <td>@item.Quantidade</td>
-                                    <td>@item.ValorUnitario.ToString("C", _ptBr)</td>
-                                    <td>@item.Total.ToString("C", _ptBr)</td>
-                                </tr>
-                            }
-                        </tbody>
-                    </table>
-                    <p style="text-align:right;font-weight:700;margin-top:10px">Total do pedido: @p.Total.ToString("C", _ptBr)</p>
+                    <div class="form-row">
+                        <div class="form-group"><label>Senha</label><InputText type="password" class="form-control" @bind-Value="_cadastro.Senha" /></div>
+                        <div class="form-group"><label>Confirmar senha</label><InputText type="password" class="form-control" @bind-Value="_cadastro.Confirmacao" /></div>
+                    </div>
+                    <button type="button" class="btn btn-primary" disabled="@_processando" @onclick="Cadastrar">@(_processando ? "Cadastrando..." : "Cadastrar")</button>
+                }
+                @if (!string.IsNullOrWhiteSpace(_erro))
+                {
+                    <div class="login-error" style="margin-top:16px">@_erro</div>
+                }
+            </div>
+        }
+        else
+        {
+            <div class="card" style="margin-bottom:16px;display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap">
+                <div><strong>@ClienteAuth.ClienteAtual?.Nome</strong><br /><small>@ClienteAuth.ClienteAtual?.Email</small></div>
+                <button type="button" class="btn btn-secondary" @onclick="TrocarConta">Trocar conta</button>
+            </div>
 
-                    @if (p.FormaPagamento == FormaPagamento.Pix)
-                    {
-                        var estado = ObterEstadoPix(p.Id);
-                        <PagamentoPixClienteCard Pagamento="estado.Pagamento"
-                                                 Carregando="estado.Carregando"
-                                                 Erro="@estado.Erro" />
-                    }
-                </div>
+            @if (_carregandoPedidos)
+            {
+                <p class="loja-loading">Carregando pedidos...</p>
+            }
+            else if (_pedidos.Count == 0)
+            {
+                <p class="loja-empty-msg">Você ainda não fez nenhum pedido.</p>
+            }
+            else
+            {
+                @foreach (var p in _pedidos)
+                {
+                    <div class="card" style="margin-bottom:16px;padding:16px">
+                        <div class="card-header-row">
+                            <div>
+                                <strong>Pedido #@p.Id</strong>
+                                <span style="color:var(--text-muted);font-size:13px;margin-left:8px">@p.Data.ToLocalTime().ToString("dd/MM/yyyy HH:mm")</span>
+                            </div>
+                            <StatusBadge Status="@p.Status" />
+                        </div>
+                        @if (p.FormaPagamento is not null)
+                        {
+                            <p style="color:var(--text-muted);font-size:13px;margin-top:4px">Pagamento: @p.FormaPagamento.Value.Rotulo()</p>
+                        }
+                        <table class="data-table" style="margin-top:10px">
+                            <thead><tr><th>Item</th><th>Qtd</th><th>Preço</th><th>Total</th></tr></thead>
+                            <tbody>
+                                @foreach (var item in p.Itens)
+                                {
+                                    <tr>
+                                        <td>@item.Descricao</td>
+                                        <td>@item.Quantidade</td>
+                                        <td>@item.ValorUnitario.ToString("C", _ptBr)</td>
+                                        <td>@item.Total.ToString("C", _ptBr)</td>
+                                    </tr>
+                                }
+                            </tbody>
+                        </table>
+                        <p style="text-align:right;font-weight:700;margin-top:10px">Total do pedido: @p.Total.ToString("C", _ptBr)</p>
+
+                        @if (p.FormaPagamento == FormaPagamento.Pix)
+                        {
+                            var estado = ObterEstadoPix(p.Id);
+                            <PagamentoPixClienteCard Pagamento="estado.Pagamento"
+                                                     Carregando="estado.Carregando"
+                                                     Erro="@estado.Erro"
+                                                     WhatsAppLink="@WhatsAppLinkBuilder.MontarLinkPedido(_empresa.WhatsApp, p.Id)"
+                                                     OnEnviarComprovante="arquivo => EnviarComprovanteAsync(p.Id, arquivo)" />
+                        }
+                    </div>
+                }
             }
         }
     </div>
@@ -89,10 +126,12 @@ else
     [Parameter] public string Slug { get; set; } = "";
     private Empresa? _empresa;
     private bool _carregandoEmpresa = true;
-    private string _telefone = "";
-    private bool _buscando;
-    private bool _buscou;
+    private bool _carregandoPedidos;
+    private bool _modoCadastro;
+    private bool _processando;
     private string? _erro;
+    private LoginModel _login = new();
+    private CadastroModel _cadastro = new();
     private List<Pedido> _pedidos = [];
     private readonly Dictionary<int, PixClienteEstado> _pixPorPedido = [];
     private readonly System.Globalization.CultureInfo _ptBr = new("pt-BR");
@@ -101,6 +140,8 @@ else
     {
         _empresa = await Loja.ObterEmpresaPorSlugAsync(Slug);
         _carregandoEmpresa = false;
+        if (_empresa is not null && ClienteAuth.EstaAutenticado(_empresa.Id))
+            await CarregarPedidosAsync();
     }
 
     protected override async Task OnAfterRenderAsync(bool firstRender)
@@ -114,48 +155,79 @@ else
         }
     }
 
-    private async Task OnKeyUp(KeyboardEventArgs e)
+    private void TrocarModo(bool cadastro)
     {
-        if (e.Key == "Enter")
-            await Buscar();
+        _modoCadastro = cadastro;
+        _erro = null;
     }
 
-    private async Task Buscar()
+    private async Task Entrar()
     {
         if (_empresa is null) return;
+        _processando = true;
         _erro = null;
-
-        if (string.IsNullOrWhiteSpace(_telefone))
-        {
-            _erro = "Informe um telefone.";
-            return;
-        }
-
-        _buscando = true;
         try
         {
-            _pedidos = await Loja.ListarPedidosPorTelefoneAsync(_empresa.Id, _telefone);
-            _buscou = true;
+            if (!await ClienteAuth.LoginAsync(_empresa.Id, _login.Email, _login.Senha))
+                _erro = "E-mail ou senha inválidos.";
+            else
+                await CarregarPedidosAsync();
+        }
+        catch (Exception ex) { _erro = ex.Message; }
+        finally { _processando = false; }
+    }
+
+    private async Task Cadastrar()
+    {
+        if (_empresa is null) return;
+        if (_cadastro.Senha != _cadastro.Confirmacao) { _erro = "As senhas não conferem."; return; }
+        _processando = true;
+        _erro = null;
+        try
+        {
+            await ClienteAuth.CadastrarAsync(_empresa.Id, _cadastro.Nome, _cadastro.Email, _cadastro.Telefone, _cadastro.Senha);
+            await CarregarPedidosAsync();
+        }
+        catch (Exception ex) { _erro = ex.Message; }
+        finally { _processando = false; }
+    }
+
+    private void TrocarConta()
+    {
+        ClienteAuth.Sair();
+        _login = new();
+        _pedidos = [];
+        _pixPorPedido.Clear();
+        _erro = null;
+    }
+
+    private async Task CarregarPedidosAsync()
+    {
+        if (_empresa is null || ClienteAuth.ClienteAtual is null) return;
+
+        _carregandoPedidos = true;
+        try
+        {
+            _pedidos = await Loja.ListarPedidosDoClienteAsync(_empresa.Id, ClienteAuth.ClienteAtual.Id);
             _pixPorPedido.Clear();
             await CarregarPixDosPedidosAsync();
         }
-        finally { _buscando = false; }
+        finally { _carregandoPedidos = false; }
     }
 
     private async Task CarregarPixDosPedidosAsync()
     {
-        if (_empresa is null) return;
+        if (_empresa is null || ClienteAuth.ClienteAtual is null) return;
+        var clienteId = ClienteAuth.ClienteAtual.Id;
 
         foreach (var pedido in _pedidos.Where(p => p.FormaPagamento == FormaPagamento.Pix))
-        {
             _pixPorPedido[pedido.Id] = new PixClienteEstado { Carregando = true };
-        }
 
         foreach (var pedido in _pedidos.Where(p => p.FormaPagamento == FormaPagamento.Pix))
         {
             try
             {
-                var pagamento = await PagamentoPix.ObterParaClienteAsync(_empresa.Id, pedido.Id, _telefone);
+                var pagamento = await PagamentoPix.ObterParaClienteAsync(_empresa.Id, pedido.Id, clienteId);
                 _pixPorPedido[pedido.Id] = new PixClienteEstado { Pagamento = pagamento };
             }
             catch (Exception)
@@ -168,8 +240,28 @@ else
         }
     }
 
+    private async Task EnviarComprovanteAsync(int pedidoId, (byte[] Conteudo, string NomeArquivo, string ContentType) arquivo)
+    {
+        if (_empresa is null || ClienteAuth.ClienteAtual is null) return;
+
+        var pagamento = await PagamentoPix.EnviarComprovanteAsync(
+            _empresa.Id, pedidoId, ClienteAuth.ClienteAtual.Id,
+            arquivo.Conteudo, arquivo.NomeArquivo, arquivo.ContentType);
+        _pixPorPedido[pedidoId] = new PixClienteEstado { Pagamento = pagamento };
+    }
+
     private PixClienteEstado ObterEstadoPix(int pedidoId) =>
         _pixPorPedido.TryGetValue(pedidoId, out var estado) ? estado : new PixClienteEstado { Carregando = true };
+
+    private sealed class LoginModel { public string Email { get; set; } = ""; public string Senha { get; set; } = ""; }
+    private sealed class CadastroModel
+    {
+        public string Nome { get; set; } = "";
+        public string Email { get; set; } = "";
+        public string Telefone { get; set; } = "";
+        public string Senha { get; set; } = "";
+        public string Confirmacao { get; set; } = "";
+    }
 
     private sealed class PixClienteEstado
     {

@@ -171,6 +171,23 @@ a { color: inherit; text-decoration: none; }
 
 .page-header h1 { font-size: 26px; font-weight: 800; color: var(--text); letter-spacing: -0.5px; }
 .page-header .subtitle { color: var(--text-muted); font-size: 13px; margin-top: 4px; }
+.pedidos-pix-pendente-chip {
+    display: inline-flex;
+    align-items: center;
+    margin-left: 10px;
+    padding: 2px 8px;
+    border-radius: 999px;
+    background: var(--yellow-light, #fef3c7);
+    color: var(--yellow-text, #92400e);
+    font-size: 12px;
+    font-weight: 700;
+}
+.pedidos-pix-pendente-dot {
+    color: #f59e0b;
+    font-size: 10px;
+    margin-left: 6px;
+    vertical-align: middle;
+}
 
 /* ── Buttons ── */
 .btn {

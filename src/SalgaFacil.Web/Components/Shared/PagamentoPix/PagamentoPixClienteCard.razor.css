@@ -92,6 +92,72 @@
     color: var(--green-text);
 }
 
+.pix-cliente-qr {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 6px;
+    margin: 14px 0;
+}
+
+.pix-cliente-qr img {
+    width: 200px;
+    height: 200px;
+    max-width: 100%;
+    border-radius: 8px;
+    border: 1px solid var(--border);
+    background: #fff;
+    padding: 8px;
+}
+
+.pix-cliente-analise,
+.pix-cliente-rejeitado {
+    padding: 12px;
+    border-radius: 8px;
+    margin-bottom: 14px;
+}
+
+.pix-cliente-analise {
+    background: var(--yellow-light);
+}
+
+.pix-cliente-analise-titulo {
+    margin: 0 0 4px;
+    font-weight: 700;
+    color: var(--yellow-text);
+}
+
+.pix-cliente-rejeitado {
+    background: #fee2e2;
+}
+
+.pix-cliente-rejeitado-titulo {
+    margin: 0 0 4px;
+    font-weight: 700;
+    color: #b91c1c;
+}
+
+.pix-cliente-upload {
+    margin-top: 14px;
+    padding-top: 14px;
+    border-top: 1px dashed var(--border);
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+
+.pix-cliente-upload-label {
+    font-size: 13px;
+    font-weight: 600;
+}
+
+.pix-cliente-whatsapp {
+    display: block;
+    text-align: center;
+    margin-top: 14px;
+    width: 100%;
+}
+
 .pix-simulado {
     margin: 12px 0 0;
     padding: 6px 10px;

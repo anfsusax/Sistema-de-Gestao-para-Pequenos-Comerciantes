@@ -9,12 +9,18 @@
     private string Label => Status switch
     {
         StatusPagamentoPix.Pago => "Pago",
+        StatusPagamentoPix.ComprovanteEnviado => "Comprovante enviado",
+        StatusPagamentoPix.EmAnalise => "Em análise",
+        StatusPagamentoPix.Rejeitado => "Comprovante rejeitado",
         _ => "Aguardando pagamento"
     };
 
     private string CssClass => Status switch
     {
         StatusPagamentoPix.Pago => "pix-status-pago",
+        StatusPagamentoPix.ComprovanteEnviado => "pix-status-enviado",
+        StatusPagamentoPix.EmAnalise => "pix-status-analise",
+        StatusPagamentoPix.Rejeitado => "pix-status-rejeitado",
         _ => "pix-status-aguardando"
     };
 }

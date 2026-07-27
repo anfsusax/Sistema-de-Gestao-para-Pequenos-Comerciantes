@@ -2,6 +2,8 @@
 @inject PedidoService Pedidos
 @inject NavigationManager Nav
 @inject IPagamentoPixService PagamentoPix
+@inject AuthService Auth
+@inject IJSRuntime JS
 
 <PageTitle>Pedido #@Id — SalgadosPro</PageTitle>
 
@@ -89,8 +91,15 @@ else
                 <ConfirmacaoPagamentoPixCard Pagamento="_pixPagamento"
                                              Carregando="_pixCarregando"
                                              Confirmando="_pixConfirmando"
+                                             MarcandoEmAnalise="_pixMarcandoEmAnalise"
+                                             Rejeitando="_pixRejeitando"
+                                             VendoComprovante="_pixVendoComprovante"
                                              Erro="@_pixErro"
-                                             OnConfirmar="ConfirmarPixAsync" />
+                                             ErroComprovante="@_pixErroComprovante"
+                                             OnConfirmar="ConfirmarPixAsync"
+                                             OnMarcarEmAnalise="MarcarPixEmAnaliseAsync"
+                                             OnVerComprovante="VerComprovantePixAsync"
+                                             OnRejeitar="RejeitarPixAsync" />
             }
         </div>
     </div>
@@ -102,7 +111,11 @@ else
     private PagamentoPixDto? _pixPagamento;
     private bool _pixCarregando;
     private bool _pixConfirmando;
+    private bool _pixMarcandoEmAnalise;
+    private bool _pixRejeitando;
+    private bool _pixVendoComprovante;
     private string? _pixErro;
+    private string? _pixErroComprovante;
     private readonly System.Globalization.CultureInfo _ptBr = new("pt-BR");
 
     protected override async Task OnInitializedAsync()
@@ -121,6 +134,8 @@ else
         try
         {
             _pixPagamento = await PagamentoPix.ObterParaAdministracaoAsync(Id);
+            if (_pixPagamento is null)
+                _pixErro = "Não foi possível carregar o pagamento Pix.";
         }
         catch (Exception ex)
         {
@@ -141,11 +156,14 @@ else
 
     private async Task ConfirmarPixAsync()
     {
+        var usuarioId = Auth.UsuarioAtual?.Id
+            ?? throw new InvalidOperationException("Faça login para continuar.");
+
         _pixConfirmando = true;
         _pixErro = null;
         try
         {
-            await PagamentoPix.ConfirmarRecebimentoAsync(Id);
+            await PagamentoPix.ConfirmarRecebimentoAsync(Id, usuarioId);
             _pixPagamento = await PagamentoPix.ObterParaAdministracaoAsync(Id);
         }
         catch (Exception ex)
@@ -155,6 +173,76 @@ else
         finally
         {
             _pixConfirmando = false;
+        }
+    }
+
+    private async Task MarcarPixEmAnaliseAsync()
+    {
+        var usuarioId = Auth.UsuarioAtual?.Id
+            ?? throw new InvalidOperationException("Faça login para continuar.");
+
+        _pixMarcandoEmAnalise = true;
+        _pixErro = null;
+        try
+        {
+            await PagamentoPix.MarcarEmAnaliseAsync(Id, usuarioId);
+            _pixPagamento = await PagamentoPix.ObterParaAdministracaoAsync(Id);
+        }
+        catch (Exception ex)
+        {
+            _pixErro = ex.Message;
+        }
+        finally
+        {
+            _pixMarcandoEmAnalise = false;
+        }
+    }
+
+    private async Task RejeitarPixAsync(string motivo)
+    {
+        var usuarioId = Auth.UsuarioAtual?.Id
+            ?? throw new InvalidOperationException("Faça login para continuar.");
+
+        _pixRejeitando = true;
+        _pixErro = null;
+        try
+        {
+            await PagamentoPix.RejeitarComprovanteAsync(Id, usuarioId, motivo);
+            _pixPagamento = await PagamentoPix.ObterParaAdministracaoAsync(Id);
+        }
+        catch (Exception ex)
+        {
+            _pixErro = ex.Message;
+        }
+        finally
+        {
+            _pixRejeitando = false;
+        }
+    }
+
+    private async Task VerComprovantePixAsync()
+    {
+        _pixVendoComprovante = true;
+        _pixErroComprovante = null;
+        try
+        {
+            var arquivo = await PagamentoPix.ObterComprovanteParaAdministracaoAsync(Id);
+            if (arquivo is null)
+            {
+                _pixErroComprovante = "Comprovante não encontrado.";
+                return;
+            }
+
+            await JS.InvokeVoidAsync("salgaFacilAbrirComprovante",
+                Convert.ToBase64String(arquivo.Conteudo), arquivo.ContentType, arquivo.NomeArquivo);
+        }
+        catch (Exception ex)
+        {
+            _pixErroComprovante = ex.Message;
+        }
+        finally
+        {
+            _pixVendoComprovante = false;
         }
     }
 }

@@ -141,6 +141,19 @@ public class SalgaFacilDbContext : DbContext
             e.Property(p => p.EnderecoEntrega).HasMaxLength(400);
             e.HasOne(p => p.Empresa).WithMany().HasForeignKey(p => p.EmpresaId).OnDelete(DeleteBehavior.Restrict);
             e.HasIndex(p => p.EmpresaId);
+
+            // PIX-MANUAL-002 — comprovante de pagamento e responsáveis pela revisão/confirmação.
+            // Restrict (não Cascade) nas duas FKs para Usuario: um funcionário não pode ser
+            // excluído enquanto houver pedidos que ele confirmou/revisou — mesma política já
+            // usada para SessaoCaixa.UsuarioAbertura/UsuarioFechamento neste mesmo arquivo.
+            e.Property(p => p.ComprovanteCaminho).HasMaxLength(300);
+            e.Property(p => p.ComprovanteNomeOriginal).HasMaxLength(255);
+            e.Property(p => p.ComprovanteContentType).HasMaxLength(100);
+            e.Property(p => p.ComprovanteMotivoRejeicao).HasMaxLength(500);
+            e.HasOne(p => p.ComprovanteRevisadoPorUsuario).WithMany()
+                .HasForeignKey(p => p.ComprovanteRevisadoPorUsuarioId).OnDelete(DeleteBehavior.Restrict);
+            e.HasOne(p => p.PagamentoConfirmadoPorUsuario).WithMany()
+                .HasForeignKey(p => p.PagamentoConfirmadoPorUsuarioId).OnDelete(DeleteBehavior.Restrict);
         });
 
         modelBuilder.Entity<PedidoItem>(e =>

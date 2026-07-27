@@ -1,4 +1,6 @@
 @namespace SalgaFacil.Web.Components.Shared
+@using System.Globalization
+@using Microsoft.AspNetCore.Components.Forms
 @using SalgaFacil.Web.Contracts.Pagamentos
 @inject IJSRuntime JS
 
@@ -45,45 +47,114 @@
     }
     else
     {
-        <dl class="pix-cliente-dados">
-            <div>
-                <dt>Valor</dt>
-                <dd class="pix-cliente-valor">@Pagamento.Valor.ToString("C", _ptBr)</dd>
+        @if (Pagamento.Status is StatusPagamentoPix.ComprovanteEnviado or StatusPagamentoPix.EmAnalise)
+        {
+            <div class="pix-cliente-analise" role="status">
+                <p class="pix-cliente-analise-titulo">
+                    @(Pagamento.Status == StatusPagamentoPix.EmAnalise ? "Comprovante em análise" : "Comprovante enviado")
+                </p>
+                <p class="pix-cliente-meta">
+                    A loja vai conferir o recebimento na conta e confirmar o pagamento. Isso não é automático.
+                </p>
+                @if (!string.IsNullOrWhiteSpace(Pagamento.ComprovanteNomeArquivo))
+                {
+                    <p class="pix-cliente-meta">Arquivo: @Pagamento.ComprovanteNomeArquivo</p>
+                }
+                @if (Pagamento.ComprovanteEnviadoEm is not null)
+                {
+                    <p class="pix-cliente-meta">
+                        Enviado em @Pagamento.ComprovanteEnviadoEm.Value.ToLocalTime().ToString("dd/MM/yyyy HH:mm")
+                    </p>
+                }
             </div>
-            <div>
-                <dt>Beneficiário</dt>
-                <dd>@(Pagamento.NomeBeneficiario ?? "—")</dd>
-            </div>
-            <div class="pix-cliente-chave-bloco">
-                <dt>Chave Pix</dt>
-                <dd>
-                    <code class="pix-cliente-chave" id="@_chaveId">@(Pagamento.Chave ?? "—")</code>
-                </dd>
-            </div>
-        </dl>
+        }
+        else
+        {
+            @if (Pagamento.Status == StatusPagamentoPix.Rejeitado)
+            {
+                <div class="pix-cliente-rejeitado" role="alert">
+                    <p class="pix-cliente-rejeitado-titulo">Comprovante rejeitado</p>
+                    @if (!string.IsNullOrWhiteSpace(Pagamento.ComprovanteMotivoRejeicao))
+                    {
+                        <p class="pix-cliente-meta">Motivo: @Pagamento.ComprovanteMotivoRejeicao</p>
+                    }
+                    <p class="pix-cliente-meta">Confira o pagamento e envie o comprovante novamente.</p>
+                </div>
+            }
 
-        <div class="pix-cliente-acoes">
-            <button type="button"
-                    class="btn btn-primary pix-cliente-copiar"
-                    disabled="@(string.IsNullOrWhiteSpace(Pagamento.Chave) || _copiando)"
-                    @onclick="CopiarChaveAsync">
-                @(_copiado ? "Chave copiada" : _copiando ? "Copiando..." : "Copiar chave")
-            </button>
-            <span class="pix-cliente-hint" aria-live="assertive">
-                @if (!string.IsNullOrEmpty(_erroCopia))
-                {
-                    <span class="pix-cliente-erro">@_erroCopia</span>
-                }
-                else if (_copiado)
-                {
-                    <text>Chave copiada. Cole no aplicativo do seu banco.</text>
-                }
-                else
-                {
-                    <text>Pague no app do banco. A loja confirma o recebimento.</text>
-                }
-            </span>
-        </div>
+            <dl class="pix-cliente-dados">
+                <div>
+                    <dt>Valor</dt>
+                    <dd class="pix-cliente-valor">@Pagamento.Valor.ToString("C", _ptBr)</dd>
+                </div>
+                <div>
+                    <dt>Beneficiário</dt>
+                    <dd>@(Pagamento.NomeBeneficiario ?? "—")</dd>
+                </div>
+                <div class="pix-cliente-chave-bloco">
+                    <dt>Chave Pix</dt>
+                    <dd>
+                        <code class="pix-cliente-chave" id="@_chaveId">@(Pagamento.Chave ?? "—")</code>
+                    </dd>
+                </div>
+            </dl>
+
+            @if (!string.IsNullOrWhiteSpace(Pagamento.QrCodePngBase64))
+            {
+                <div class="pix-cliente-qr">
+                    <img src="data:image/png;base64,@Pagamento.QrCodePngBase64" alt="QR Code Pix do pedido #@Pagamento.PedidoId" />
+                    <p class="pix-cliente-hint">Escaneie com o app do seu banco</p>
+                </div>
+            }
+
+            <div class="pix-cliente-acoes">
+                <button type="button"
+                        class="btn btn-primary pix-cliente-copiar"
+                        disabled="@(string.IsNullOrWhiteSpace(Pagamento.PayloadCopiaECola) || _copiandoPayload)"
+                        @onclick="CopiarPayloadAsync">
+                    @(_copiadoPayload ? "Pix Copia e Cola copiado" : _copiandoPayload ? "Copiando..." : "Copiar Pix Copia e Cola")
+                </button>
+                <button type="button"
+                        class="btn btn-secondary pix-cliente-copiar"
+                        disabled="@(string.IsNullOrWhiteSpace(Pagamento.Chave) || _copiandoChave)"
+                        @onclick="CopiarChaveAsync">
+                    @(_copiadoChave ? "Chave copiada" : _copiandoChave ? "Copiando..." : "Copiar chave")
+                </button>
+                <span class="pix-cliente-hint" aria-live="assertive">
+                    @if (!string.IsNullOrEmpty(_erroCopia))
+                    {
+                        <span class="pix-cliente-erro">@_erroCopia</span>
+                    }
+                    else
+                    {
+                        <text>Pague no app do banco. A loja confirma o recebimento.</text>
+                    }
+                </span>
+            </div>
+
+            @if (Pagamento.PodeEnviarComprovante)
+            {
+                <div class="pix-cliente-upload">
+                    <label for="@_uploadId" class="pix-cliente-upload-label">Anexar comprovante (JPG, PNG ou PDF, até 8 MB)</label>
+                    <InputFile id="@_uploadId" OnChange="EnviarArquivoAsync" disabled="@_enviando" accept=".jpg,.jpeg,.png,.pdf" />
+                    @if (_enviando)
+                    {
+                        <p class="pix-cliente-hint">Enviando comprovante...</p>
+                    }
+                    @if (!string.IsNullOrEmpty(_erroUpload))
+                    {
+                        <p class="pix-cliente-erro" role="alert">@_erroUpload</p>
+                    }
+                </div>
+            }
+        }
+    }
+
+    @if (!Carregando && Pagamento is not null && string.IsNullOrEmpty(Erro) && !string.IsNullOrWhiteSpace(WhatsAppLink))
+    {
+        <a class="btn btn-secondary pix-cliente-whatsapp" href="@WhatsAppLink" target="_blank" rel="noopener noreferrer">
+            Falar com a loja no WhatsApp
+        </a>
     }
 
     @if (Pagamento?.Simulado == true)
@@ -96,33 +167,116 @@
     [Parameter] public PagamentoPixDto? Pagamento { get; set; }
     [Parameter] public bool Carregando { get; set; }
     [Parameter] public string? Erro { get; set; }
+    [Parameter] public string? WhatsAppLink { get; set; }
+    /// <summary>Disparado com (bytes, nome original, content-type declarado pelo navegador) quando o cliente escolhe um arquivo válido.</summary>
+    [Parameter] public EventCallback<(byte[] Conteudo, string NomeArquivo, string ContentType)> OnEnviarComprovante { get; set; }
 
-    private readonly System.Globalization.CultureInfo _ptBr = new("pt-BR");
+    private const long TamanhoMaximoBytes = 8 * 1024 * 1024;
+
+    private readonly CultureInfo _ptBr = new("pt-BR");
     private readonly string _chaveId = $"pix-chave-{Guid.NewGuid():N}";
-    private bool _copiado;
-    private bool _copiando;
+    private readonly string _uploadId = $"pix-upload-{Guid.NewGuid():N}";
+    private bool _copiadoChave;
+    private bool _copiandoChave;
+    private bool _copiadoPayload;
+    private bool _copiandoPayload;
     private string? _erroCopia;
+    private bool _enviando;
+    private string? _erroUpload;
+
+    protected override void OnParametersSet()
+    {
+        // Reseta o feedback de "copiado"/erro quando o status do pagamento muda (ex.: comprovante
+        // acabou de ser enviado) para não deixar mensagem antiga na tela.
+        _copiadoChave = false;
+        _copiadoPayload = false;
+    }
 
     private async Task CopiarChaveAsync()
     {
         if (Pagamento is null || string.IsNullOrWhiteSpace(Pagamento.Chave))
             return;
 
-        _copiando = true;
-        _copiado = false;
+        _copiandoChave = true;
+        _copiadoChave = false;
         _erroCopia = null;
         try
         {
             await JS.InvokeVoidAsync("navigator.clipboard.writeText", Pagamento.Chave);
-            _copiado = true;
+            _copiadoChave = true;
         }
         catch
         {
-            _erroCopia = "Não foi possível copiar a chave. Selecione e copie manualmente.";
+            _erroCopia = "Não foi possível copiar. Selecione e copie manualmente.";
         }
         finally
         {
-            _copiando = false;
+            _copiandoChave = false;
+        }
+    }
+
+    private async Task CopiarPayloadAsync()
+    {
+        if (Pagamento is null || string.IsNullOrWhiteSpace(Pagamento.PayloadCopiaECola))
+            return;
+
+        _copiandoPayload = true;
+        _copiadoPayload = false;
+        _erroCopia = null;
+        try
+        {
+            await JS.InvokeVoidAsync("navigator.clipboard.writeText", Pagamento.PayloadCopiaECola);
+            _copiadoPayload = true;
+        }
+        catch
+        {
+            _erroCopia = "Não foi possível copiar. Selecione e copie manualmente.";
+        }
+        finally
+        {
+            _copiandoPayload = false;
+        }
+    }
+
+    private async Task EnviarArquivoAsync(InputFileChangeEventArgs args)
+    {
+        _erroUpload = null;
+        var arquivo = args.File;
+        if (arquivo is null) return;
+
+        if (arquivo.Size > TamanhoMaximoBytes)
+        {
+            _erroUpload = "Arquivo maior que 8 MB. Envie uma imagem ou PDF menor.";
+            return;
+        }
+
+        _enviando = true;
+        try
+        {
+            await using var stream = arquivo.OpenReadStream(TamanhoMaximoBytes);
+            using var buffer = new MemoryStream();
+            await stream.CopyToAsync(buffer);
+
+            if (OnEnviarComprovante.HasDelegate)
+                await OnEnviarComprovante.InvokeAsync((buffer.ToArray(), arquivo.Name, arquivo.ContentType));
+        }
+        catch (IOException)
+        {
+            _erroUpload = "Arquivo maior que 8 MB. Envie uma imagem ou PDF menor.";
+        }
+        catch (InvalidOperationException ex)
+        {
+            // Mensagem de negócio vinda do serviço (ex.: "pedido já pago", "tipo de arquivo não
+            // permitido") — segura para mostrar ao cliente, ao contrário de uma exceção genérica.
+            _erroUpload = ex.Message;
+        }
+        catch (Exception)
+        {
+            _erroUpload = "Não foi possível enviar o comprovante agora. Tente novamente.";
+        }
+        finally
+        {
+            _enviando = false;
         }
     }
 }
